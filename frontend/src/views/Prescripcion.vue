@@ -13,15 +13,7 @@
             </h1>
           </div>
           
-          <div class="flex items-center space-x-4">
-            <button
-              @click="showCreateRecipe = true"
-              class="btn-primary"
-            >
-              <PlusIcon class="h-5 w-5 mr-2" />
-              Nueva Receta
-            </button>
-          </div>
+
         </div>
       </div>
     </header>
@@ -39,23 +31,9 @@
           </div>
         </div>
 
-        <!-- Información del paciente seleccionado -->
-        <div v-if="selectedPatient" class="mb-6">
-          <DetallePaciente 
-            :patient="selectedPatient"
-            @edit-patient="onEditPatient"
-            @view-history="onViewHistory"
-          />
-        </div>
 
-        <!-- Mensaje si no hay paciente seleccionado -->
-        <div v-if="!selectedPatient" class="text-center py-12">
-          <UserIcon class="mx-auto h-12 w-12 text-secondary-400" />
-          <h3 class="mt-2 text-lg font-medium text-secondary-900">Selecciona un paciente</h3>
-          <p class="mt-1 text-secondary-600">
-            Busca y selecciona un paciente para crear una nueva receta.
-          </p>
-        </div>
+
+
       </div>
     </main>
 
@@ -81,6 +59,16 @@
       :patient="selectedPatient"
       @close="showHistory = false"
     />
+
+    <!-- Modal de detalles del paciente -->
+    <DetallePaciente
+      v-if="selectedPatient && showPatientDetails"
+      :patient="selectedPatient"
+      :isVisible="showPatientDetails"
+      @edit-patient="onEditPatient"
+      @view-history="onViewHistory"
+      @close="closePatientDetails"
+    />
   </div>
 </template>
 
@@ -90,7 +78,8 @@ import { useToast } from 'vue-toastification'
 import {
   ArrowLeftIcon,
   PlusIcon,
-  UserIcon
+  UserIcon,
+  EyeIcon
 } from '@heroicons/vue/24/outline'
 
 // Importar componentes
@@ -100,12 +89,16 @@ import FormularioPaciente from '@/components/atencion-usuario/FormularioPaciente
 import FormularioReceta from '@/components/shared/FormularioReceta.vue'
 import HistorialPaciente from '@/components/shared/HistorialPaciente.vue'
 
+// Importar servicios
+import { patientsService } from '@/services/patients'
+
 export default {
   name: 'Prescripcion',
   components: {
     ArrowLeftIcon,
     PlusIcon,
     UserIcon,
+    EyeIcon,
     BuscarPaciente,
     DetallePaciente,
     FormularioPaciente,
@@ -120,13 +113,42 @@ export default {
     const showCreatePatient = ref(false)
     const editingPatient = ref(null)
     const showHistory = ref(false)
+    const showPatientDetails = ref(false)
     
-    const onPatientSelected = (patient) => {
-      selectedPatient.value = patient
+    const onPatientSelected = async (patient) => {
+      try {
+        // Obtener datos completos del paciente al seleccionarlo
+        console.log('Obteniendo datos completos del paciente al seleccionarlo:', patient.expediente)
+        const fullPatient = await patientsService.getPatientByExpediente(patient.expediente)
+        console.log('Datos completos obtenidos al seleccionar:', fullPatient)
+        
+        // Asignar el paciente completo
+        selectedPatient.value = fullPatient
+        showPatientDetails.value = true
+      } catch (error) {
+        console.error('Error obteniendo datos completos del paciente al seleccionarlo:', error)
+        toast.error('Error al cargar datos del paciente')
+        // Usar los datos disponibles como fallback
+        selectedPatient.value = patient
+        showPatientDetails.value = true
+      }
     }
     
-    const onEditPatient = (patient) => {
-      editingPatient.value = patient
+    const onEditPatient = async (patient) => {
+      try {
+        // Obtener datos completos del paciente antes de editar
+        console.log('Obteniendo datos completos del paciente en Prescripción:', patient.expediente)
+        const fullPatient = await patientsService.getPatientByExpediente(patient.expediente)
+        console.log('Datos completos obtenidos en Prescripción:', fullPatient)
+        
+        // Abrir el modal de edición con datos completos
+        editingPatient.value = fullPatient
+      } catch (error) {
+        console.error('Error obteniendo datos completos del paciente en Prescripción:', error)
+        toast.error('Error al cargar datos del paciente')
+        // Usar los datos disponibles como fallback
+        editingPatient.value = patient
+      }
     }
     
     const onViewHistory = () => {
@@ -138,10 +160,30 @@ export default {
       editingPatient.value = null
     }
     
-    const onPatientSaved = (patient) => {
-      selectedPatient.value = patient
-      closePatientModal()
-      toast.success('Paciente guardado correctamente')
+    const closePatientDetails = () => {
+      showPatientDetails.value = false
+      selectedPatient.value = null
+    }
+    
+    const onPatientSaved = async (patient) => {
+      try {
+        // Obtener datos frescos del paciente después de guardar
+        console.log('Obteniendo datos frescos del paciente después de guardar:', patient.expediente)
+        const freshPatient = await patientsService.getPatientByExpediente(patient.expediente)
+        console.log('Datos frescos obtenidos:', freshPatient)
+        
+        // Actualizar selectedPatient con los datos frescos
+        selectedPatient.value = freshPatient
+        
+        closePatientModal()
+        toast.success('Paciente guardado correctamente')
+      } catch (error) {
+        console.error('Error obteniendo datos frescos del paciente:', error)
+        // Usar los datos del paciente guardado como fallback
+        selectedPatient.value = patient
+        closePatientModal()
+        toast.success('Paciente guardado correctamente')
+      }
     }
     
     const onRecipeSaved = (recipe) => {
@@ -155,10 +197,12 @@ export default {
       showCreatePatient,
       editingPatient,
       showHistory,
+      showPatientDetails,
       onPatientSelected,
       onEditPatient,
       onViewHistory,
       closePatientModal,
+      closePatientDetails,
       onPatientSaved,
       onRecipeSaved
     }

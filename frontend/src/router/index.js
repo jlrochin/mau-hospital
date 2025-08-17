@@ -5,15 +5,16 @@ import { useAuthStore } from '@/stores/auth'
 import Login from '@/views/Login.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import AtencionUsuario from '@/views/AtencionUsuario.vue'
+import Validacion from '@/views/Validacion.vue'
 import Farmacia from '@/views/Farmacia.vue'
 import CMI from '@/views/CMI.vue'
-import Validacion from '@/views/Validacion.vue'
 import Prescripcion from '@/views/Prescripcion.vue'
 import RecetasCompletadas from '@/views/RecetasCompletadas.vue'
 import Reportes from '@/views/Reportes.vue'
 import Inventario from '@/views/Inventario.vue'
 import Notificaciones from '@/views/Notificaciones.vue'
 import Auditoria from '@/views/Auditoria.vue'
+import RegistroMovimientos from '@/views/RegistroMovimientos.vue'
 
 const routes = [
     {
@@ -117,6 +118,12 @@ const routes = [
             requiresAuth: true,
             adminOnly: true // Solo para administradores
         }
+    },
+    {
+        path: '/registro-movimientos',
+        name: 'registro-movimientos',
+        component: RegistroMovimientos,
+        meta: { requiresAuth: true }
     },
     {
         path: '/:pathMatch(.*)*',

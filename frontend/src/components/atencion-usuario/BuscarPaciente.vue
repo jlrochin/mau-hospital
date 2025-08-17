@@ -51,53 +51,88 @@
       </div>
     </div>
 
-    <!-- Resultados de búsqueda -->
-    <div v-if="searchResults.length > 0 && !isLoading" class="space-y-2">
-      <h3 class="text-lg font-medium text-secondary-900">
-        Resultados de búsqueda ({{ searchResults.length }})
-      </h3>
-      
-      <div class="max-h-96 overflow-y-auto custom-scrollbar space-y-2">
-        <div
-          v-for="patient in searchResults"
-          :key="patient.expediente"
-          @click="selectPatient(patient)"
-          class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+    <!-- Tabla de resultados -->
+    <div v-if="searchResults.length > 0 && !isLoading" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-medium text-secondary-900">
+          Resultados de búsqueda ({{ searchResults.length }})
+        </h3>
+        <button
+          @click="clearSearch"
+          class="text-sm text-secondary-600 hover:text-secondary-800 underline"
         >
-          <div class="flex justify-between items-start">
-            <div class="flex-1">
-              <div class="mb-2">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
-                  <div>
-                    <span class="text-xs font-medium text-secondary-500">Nombre(s):</span>
-                    <p class="font-medium text-secondary-900">{{ patient.nombre }}</p>
+          Limpiar búsqueda
+        </button>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider border-b border-gray-200">
+                Paciente
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider border-b border-gray-200">
+                Expediente
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider border-b border-gray-200">
+                CURP
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider border-b border-gray-200">
+                Edad
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider border-b border-gray-200">
+                Patología
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider border-b border-gray-200">
+                Género
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr
+              v-for="patient in searchResults"
+              :key="patient.expediente"
+              @click="showPatientDetails(patient)"
+              class="hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+            >
+              <td class="px-4 py-3">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0 h-10 w-10">
+                    <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                      <span class="text-sm font-medium text-primary-700">
+                        {{ patient.nombre.charAt(0) }}{{ patient.apellido_paterno.charAt(0) }}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span class="text-xs font-medium text-secondary-500">Apellido Paterno:</span>
-                    <p class="font-medium text-secondary-900">{{ patient.apellido_paterno }}</p>
-                  </div>
-                  <div>
-                    <span class="text-xs font-medium text-secondary-500">Apellido Materno:</span>
-                    <p class="font-medium text-secondary-900">{{ patient.apellido_materno || 'N/A' }}</p>
+                  <div class="ml-3">
+                    <div class="text-sm font-medium text-secondary-900">
+                      {{ patient.nombre }} {{ patient.apellido_paterno }} {{ patient.apellido_materno || '' }}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="mt-2 text-sm text-secondary-600 space-y-1">
-                <p><span class="font-medium">Expediente:</span> {{ patient.expediente }}</p>
-                <p><span class="font-medium">CURP:</span> {{ patient.curp }}</p>
-                <p><span class="font-medium">Edad:</span> {{ patient.edad }} años</p>
-                <p><span class="font-medium">Patología:</span> {{ patient.patologia }}</p>
-              </div>
-            </div>
-            
-            <div class="flex items-center space-x-2">
-              <span class="badge bg-primary-600 text-white">
-                {{ patient.genero }}
-              </span>
-              <ChevronRightIcon class="h-5 w-5 text-secondary-400" />
-            </div>
-          </div>
-        </div>
+              </td>
+              <td class="px-4 py-3 text-sm text-secondary-900 font-mono">
+                {{ patient.expediente }}
+              </td>
+              <td class="px-4 py-3 text-sm text-secondary-900 font-mono">
+                {{ patient.curp }}
+              </td>
+              <td class="px-4 py-3 text-sm text-secondary-900">
+                {{ patient.edad }} años
+              </td>
+              <td class="px-4 py-3 text-sm text-secondary-900">
+                {{ patient.patologia }}
+              </td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      :class="patient.genero === 'MASCULINO' ? 'bg-primary-100 text-primary-800' : 'bg-accent-100 text-accent-800'">
+                  {{ patient.genero === 'MASCULINO' ? 'M' : 'F' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -108,12 +143,20 @@
       <p class="mt-1 text-secondary-600">
         No hay pacientes que coincidan con tu búsqueda.
       </p>
-      <button
-        @click="$emit('new-patient')"
-        class="mt-4 btn-primary"
-      >
-        Crear nuevo paciente
-      </button>
+      <div class="mt-4 space-x-3">
+        <button
+          @click="clearSearch"
+          class="btn-secondary"
+        >
+          Limpiar búsqueda
+        </button>
+        <button
+          @click="$emit('new-patient')"
+          class="btn-primary"
+        >
+          Crear nuevo paciente
+        </button>
+      </div>
     </div>
 
     <!-- Duplicados encontrados (solo en modo verificación) -->
@@ -142,11 +185,10 @@
 <script>
 import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
-import api from '@/services/api'
+import { patientsService } from '@/services/patients'
 import {
   MagnifyingGlassIcon,
   PlusIcon,
-  ChevronRightIcon,
   ExclamationTriangleIcon
 } from '@heroicons/vue/24/outline'
 
@@ -155,10 +197,9 @@ export default {
   components: {
     MagnifyingGlassIcon,
     PlusIcon,
-    ChevronRightIcon,
     ExclamationTriangleIcon
   },
-  emits: ['patient-selected', 'new-patient'],
+  emits: ['patient-selected', 'new-patient', 'search-state-changed'],
   setup(props, { emit }) {
     const toast = useToast()
     
@@ -176,6 +217,14 @@ export default {
     
     const onSearchInput = () => {
       clearTimeout(searchTimeout)
+      
+      // Si hay texto en la búsqueda, emitir que la búsqueda está activa
+      if (searchQuery.value.trim()) {
+        emit('search-state-changed', true)
+      } else {
+        emit('search-state-changed', false)
+      }
+      
       searchTimeout = setTimeout(performSearch, 500)
     }
     
@@ -183,16 +232,15 @@ export default {
       if (!searchQuery.value.trim()) {
         searchResults.value = []
         hasSearched.value = false
+        emit('search-state-changed', false)
         return
       }
       
       try {
         isLoading.value = true
-        const response = await api.get('/pacientes/buscar/', {
-          params: { q: searchQuery.value.trim() }
-        })
+        const response = await patientsService.searchPatient(searchQuery.value.trim())
         
-        searchResults.value = response.data.results
+        searchResults.value = response.results || []
         hasSearched.value = true
         
         if (searchResults.value.length === 0) {
@@ -207,21 +255,17 @@ export default {
       }
     }
     
-    const selectPatient = (patient) => {
+    const showPatientDetails = (patient) => {
       emit('patient-selected', patient)
-      const nombreCompleto = `${patient.nombre} ${patient.apellido_paterno} ${patient.apellido_materno || ''}`.trim()
-      toast.success(`Paciente seleccionado: ${nombreCompleto}`)
     }
     
     // Método para verificar duplicados (usado desde componentes padre)
     const checkDuplicates = async (expediente, curp) => {
       try {
-        const response = await api.get('/pacientes/verificar-duplicados/', {
-          params: { expediente, curp }
-        })
+        const response = await patientsService.checkDuplicates(expediente, curp)
         
-        duplicates.value = response.data.duplicados || []
-        return response.data.duplicados_encontrados
+        duplicates.value = response.duplicados || []
+        return response.duplicados_encontrados
       } catch (error) {
         console.error('Error checking duplicates:', error)
         return false
@@ -233,6 +277,7 @@ export default {
       searchResults.value = []
       duplicates.value = []
       hasSearched.value = false
+      emit('search-state-changed', false)
     }
     
     return {
@@ -243,7 +288,7 @@ export default {
       showNoResults,
       onSearchInput,
       performSearch,
-      selectPatient,
+      showPatientDetails,
       checkDuplicates,
       clearSearch
     }

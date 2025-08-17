@@ -115,6 +115,7 @@
                     v-model="form.cie10"
                     placeholder="Buscar código CIE-10..."
                     @code-selected="handleCIE10Selected"
+                    @fill-patologia="handleFillPatologia"
                   />
                 </div>
 
@@ -384,6 +385,11 @@ export default {
         }
       }
     }
+
+    const handleFillPatologia = (descripcion) => {
+      // Llenar automáticamente el diagnóstico
+      form.diagnostico = descripcion
+    }
     
     const removeMedicamento = (index) => {
       form.detalles.splice(index, 1)
@@ -486,6 +492,7 @@ export default {
       updateMedicamento,
       onMedicamentoSelected,
       handleCIE10Selected,
+      handleFillPatologia,
       handleSubmit
     }
   }

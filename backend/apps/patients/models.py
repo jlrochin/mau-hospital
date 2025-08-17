@@ -1,9 +1,63 @@
 from django.db import models
 from django.core.validators import RegexValidator
 
-class CIE10Mexico(models.Model):
-    """Catálogo oficial CIE-10 autorizado en México"""
+class PacienteCIE10(models.Model):
+    """Modelo intermedio para múltiples códigos CIE-10 por paciente"""
     
+    paciente = models.ForeignKey(
+        'Paciente',
+        on_delete=models.CASCADE,
+        verbose_name='Paciente'
+    )
+    
+    cie10 = models.ForeignKey(
+        'CIE10Mexico',
+        on_delete=models.CASCADE,
+        verbose_name='Código CIE-10'
+    )
+    
+    fecha_diagnostico = models.DateField(
+        verbose_name='Fecha de Diagnóstico',
+        help_text='Fecha cuando se diagnosticó este código específico'
+    )
+    
+    es_principal = models.BooleanField(
+        default=False,
+        verbose_name='Diagnóstico Principal',
+        help_text='Indica si este es el diagnóstico principal'
+    )
+    
+    observaciones = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Observaciones',
+        help_text='Notas adicionales sobre este diagnóstico'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha de Creación'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Fecha de Actualización'
+    )
+    
+    class Meta:
+        verbose_name = 'CIE-10 del Paciente'
+        verbose_name_plural = 'CIE-10 de los Pacientes'
+        unique_together = ['paciente', 'cie10']
+        ordering = ['-es_principal', '-fecha_diagnostico']
+    
+    def __str__(self):
+        return f"{self.paciente.expediente} - {self.cie10.codigo} ({self.cie10.descripcion_corta})"
+
+
+class CIE10Mexico(models.Model):
+    """Catálogo oficial CIE-10 autorizado en México con todos los campos del archivo original"""
+    
+    # Campos principales (mantener compatibilidad)
     codigo = models.CharField(
         max_length=10,
         primary_key=True,
@@ -58,20 +112,6 @@ class CIE10Mexico(models.Model):
         verbose_name='Género aplicable'
     )
     
-    edad_minima = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='Edad mínima',
-        help_text='Edad mínima en años para aplicar este diagnóstico'
-    )
-    
-    edad_maxima = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='Edad máxima',
-        help_text='Edad máxima en años para aplicar este diagnóstico'
-    )
-    
     es_mortalidad = models.BooleanField(
         default=False,
         verbose_name='Es causa de mortalidad',
@@ -97,6 +137,518 @@ class CIE10Mexico(models.Model):
     fecha_actualizacion = models.DateTimeField(
         auto_now=True,
         verbose_name='Fecha de actualización'
+    )
+    
+    # Campos adicionales del archivo CSV original
+    consecutivo = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Consecutivo'
+    )
+    
+    letra = models.CharField(
+        max_length=1,
+        null=True,
+        blank=True,
+        verbose_name='Letra del código'
+    )
+    
+    no_caracteres = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Número de caracteres'
+    )
+    
+    codigox = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Código X'
+    )
+    
+    lsex = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LSEX'
+    )
+    
+    linf = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LINF'
+    )
+    
+    lsup = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LSUP'
+    )
+    
+    trivial = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Trivial'
+    )
+    
+    erradicado = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Erradicado'
+    )
+    
+    n_inter = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='N_INTER'
+    )
+    
+    nin = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='NIN'
+    )
+    
+    ninmtobs = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='NINMTOBS'
+    )
+    
+    cod_sit_lesion = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Código situación lesión'
+    )
+    
+    no_cbd = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='NO_CBD'
+    )
+    
+    cbd = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='CBD'
+    )
+    
+    no_aph = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='NO_APH'
+    )
+    
+    af_prin = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='AF_PRIN'
+    )
+    
+    dia_sis = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Día SIS'
+    )
+    
+    clave_programa_sis = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Clave programa SIS'
+    )
+    
+    cod_complemen_morbi = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Código complemento morbilidad'
+    )
+    
+    dia_fetal = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Día fetal'
+    )
+    
+    def_fetal_cm = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='DEF_FETAL_CM'
+    )
+    
+    def_fetal_cbd = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='DEF_FETAL_CBD'
+    )
+    
+    clave_capitulo = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Clave capítulo'
+    )
+    
+    nombre_capitulo = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='Nombre del capítulo'
+    )
+    
+    lista1 = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Lista 1'
+    )
+    
+    grupo1 = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Grupo 1'
+    )
+    
+    lista5 = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Lista 5'
+    )
+    
+    rubrica_type = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Tipo de rúbrica'
+    )
+    
+    year_modifi = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Año modificación'
+    )
+    
+    year_aplicacion = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Año aplicación'
+    )
+    
+    valid = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Válido'
+    )
+    
+    prinmorta = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRINMORTA'
+    )
+    
+    prinmorb = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRINMORB'
+    )
+    
+    lm_morbi = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LM_MORBI'
+    )
+    
+    lm_morta = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LM_MORTA'
+    )
+    
+    lgbd165 = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LGBD165'
+    )
+    
+    lomsbeck = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LOMSBECK'
+    )
+    
+    lgbd190 = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='LGBD190'
+    )
+    
+    notdiaria = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Notificación diaria'
+    )
+    
+    notsemanal = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Notificación semanal'
+    )
+    
+    sistema_especial = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Sistema especial'
+    )
+    
+    birmm = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='BIRMM'
+    )
+    
+    cve_causa_type = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Clave tipo causa'
+    )
+    
+    causa_type = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='Tipo de causa'
+    )
+    
+    epi_morta = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='EPI_MORTA'
+    )
+    
+    edas_e_iras_en_m5 = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='EDAS_E_IRAS_EN_M5'
+    )
+    
+    cve_maternas_seed_epid = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Clave maternas SEED EPID'
+    )
+    
+    epi_morta_m5 = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='EPI_MORTA_M5'
+    )
+    
+    epi_morb = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='EPI_MORB'
+    )
+    
+    def_maternas = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='DEF_MATERNAS'
+    )
+    
+    es_causes = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='ES_CAUSES'
+    )
+    
+    num_causes = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Número de causas'
+    )
+    
+    es_suive_morta = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='ES_SUIVE_MORTA'
+    )
+    
+    es_suive_morb = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='ES_SUIVE_MORB'
+    )
+    
+    epi_clave = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='EPI_CLAVE'
+    )
+    
+    epi_clave_desc = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='Descripción EPI_CLAVE'
+    )
+    
+    es_suive_notin = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='ES_SUIVE_NOTIN'
+    )
+    
+    es_suive_est_epi = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='ES_SUIVE_EST_EPI'
+    )
+    
+    es_suive_est_brote = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='ES_SUIVE_EST_BROTE'
+    )
+    
+    sinac = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='SINAC'
+    )
+    
+    prin_sinac = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRIN_SINAC'
+    )
+    
+    prin_sinac_grupo = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRIN_SINAC_GRUPO'
+    )
+    
+    descripcion_sinac_grupo = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='Descripción grupo SINAC'
+    )
+    
+    prin_sinac_subgrupo = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRIN_SINAC_SUBGRUPO'
+    )
+    
+    descripcion_sinac_subgrupo = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='Descripción subgrupo SINAC'
+    )
+    
+    daga = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='DAGA'
+    )
+    
+    asterisco = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Asterisco'
+    )
+    
+    prin_mm = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRIN_MM'
+    )
+    
+    prin_mm_grupo = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRIN_MM_GRUPO'
+    )
+    
+    descripcion_mm_grupo = models.TextField(
+        max_length=500,
+        null=True,
+        blank=True,
+        verbose_name='Descripción grupo MM'
+    )
+    
+    prin_mm_subgrupo = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='PRIN_MM_SUBGRUPO'
+    )
+    
+    descripcion_mm_subgrupo = models.TextField(
+        max_length=500,
+        null=True,
+        blank=True,
+        verbose_name='Descripción subgrupo MM'
+    )
+    
+    cod_adi_mort = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        verbose_name='Código adicional mortalidad'
     )
     
     class Meta:
@@ -128,12 +680,8 @@ class CIE10Mexico(models.Model):
             if self.genero_aplicable == 'FEMENINO' and paciente.genero != 'F':
                 return False
         
-        # Verificar edad
-        edad_paciente = paciente.get_edad()
-        if self.edad_minima and edad_paciente < self.edad_minima:
-            return False
-        if self.edad_maxima and edad_paciente > self.edad_maxima:
-            return False
+        # Nota: Los campos edad_minima y edad_maxima fueron removidos del modelo
+        # La validación de edad se puede implementar en el futuro si es necesario
         
         return True
 
@@ -225,6 +773,15 @@ class Paciente(models.Model):
         blank=True,
         verbose_name='CIE-10 Oficial',
         help_text='Relación con el catálogo oficial CIE-10 México'
+    )
+    
+    # Múltiples códigos CIE-10 (relación many-to-many)
+    cie10_codes = models.ManyToManyField(
+        'CIE10Mexico',
+        through='PacienteCIE10',
+        related_name='pacientes',
+        verbose_name='Códigos CIE-10',
+        help_text='Múltiples códigos CIE-10 para el paciente'
     )
     
     fecha_diagnostico = models.DateField(
@@ -359,6 +916,43 @@ class Paciente(models.Model):
             (today.month, today.day) < 
             (self.fecha_nacimiento.month, self.fecha_nacimiento.day)
         )
+    
+    def calcular_estado_automatico(self):
+        """Calcula automáticamente si el paciente debe estar activo basado en su actividad"""
+        from datetime import date, timedelta
+        from django.utils import timezone
+        
+        # Fecha límite: 4 años atrás desde hoy
+        fecha_limite = timezone.now() - timedelta(days=4*365)
+        
+        # Buscar la receta más reciente del paciente
+        try:
+            from apps.prescriptions.models import Receta
+            ultima_receta = Receta.objects.filter(
+                paciente=self
+            ).order_by('-created_at').first()
+            
+            # Buscar la última actividad del paciente
+            ultima_actividad = self.updated_at
+            
+            # Si hay recetas, usar la fecha de la más reciente
+            if ultima_receta and ultima_receta.created_at > ultima_actividad:
+                ultima_actividad = ultima_receta.created_at
+            
+            # Determinar si debe estar activo
+            return ultima_actividad >= fecha_limite
+        except:
+            # Si hay algún error, mantener el estado actual
+            return self.is_active
+    
+    def actualizar_estado_automatico(self):
+        """Actualiza el estado del paciente basado en su actividad reciente"""
+        nuevo_estado = self.calcular_estado_automatico()
+        if self.is_active != nuevo_estado:
+            self.is_active = nuevo_estado
+            self.save(update_fields=['is_active'])
+            return True
+        return False
     
     def save(self, *args, **kwargs):
         """Override del método save para normalizar datos"""

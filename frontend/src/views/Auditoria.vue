@@ -340,7 +340,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import api from '@/services/api'
+import { auditService } from '@/services/audit'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
@@ -419,7 +419,7 @@ export default {
     
     const eventosCriticos = computed(() => {
       return auditLogs.value.filter(log => 
-        log.status === 'ERROR' || log.action === 'DELETE'
+        log.status === 'ERROR' || log.action === 'DELETE' || log.priority === 'HIGH' || log.priority === 'CRITICAL'
       ).length
     })
     
@@ -512,60 +512,40 @@ export default {
       }
     }
     
+    const loadAuditStats = async () => {
+      try {
+        const stats = await auditService.getAuditStats()
+        // Aquí podrías usar las estadísticas del backend si las necesitas
+        console.log('Estadísticas de auditoría cargadas:', stats)
+      } catch (error) {
+        console.error('Error loading audit stats:', error)
+      }
+    }
+    
     const loadAuditLogs = async () => {
       try {
         isLoading.value = true
-        // Por ahora generamos datos de ejemplo
-        auditLogs.value = generateSampleAuditLogs()
+        
+        // Preparar parámetros para el backend
+        const params = {}
+        if (filters.value.action) params.action_type = filters.value.action
+        if (filters.value.user) params.user = filters.value.user
+        if (filters.value.dateFrom) params.date_from = filters.value.dateFrom
+        if (filters.value.dateTo) params.date_to = filters.value.dateTo
+        
+        const response = await auditService.getAuditLogs(params)
+        auditLogs.value = response.results || response.data || []
       } catch (error) {
         console.error('Error loading audit logs:', error)
         toast.error('Error al cargar el registro de auditoría')
+        auditLogs.value = []
       } finally {
         isLoading.value = false
       }
     }
     
-    // Función temporal para generar logs de auditoría de ejemplo
-    const generateSampleAuditLogs = () => {
-      const now = new Date()
-      const users = [
-        { name: 'admin', role: 'ADMIN' },
-        { name: 'farmacia1', role: 'FARMACIA' },
-        { name: 'atencion1', role: 'ATENCION_USUARIO' },
-        { name: 'cmi1', role: 'CMI' },
-        { name: 'medico1', role: 'MEDICO' }
-      ]
-      const actions = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'DISPENSE', 'VALIDATE']
-      const entities = ['Paciente', 'Receta', 'Medicamento', 'Usuario']
-      const statuses = ['SUCCESS', 'ERROR', 'WARNING']
-      
-      const logs = []
-      
-      for (let i = 1; i <= 50; i++) {
-        const user = users[Math.floor(Math.random() * users.length)]
-        const action = actions[Math.floor(Math.random() * actions.length)]
-        const entity = entities[Math.floor(Math.random() * entities.length)]
-        const status = statuses[Math.floor(Math.random() * statuses.length)]
-        
-        logs.push({
-          id: i,
-          timestamp: new Date(now - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(), // Últimos 7 días
-          user: user.name,
-          user_role: user.role,
-          action: action,
-          entity_type: entity,
-          entity_id: Math.floor(Math.random() * 1000),
-          details: `${getActionLabel(action)} ${entity.toLowerCase()} #${Math.floor(Math.random() * 1000)}`,
-          ip_address: `192.168.1.${Math.floor(Math.random() * 255)}`,
-          status: status
-        })
-      }
-      
-      return logs
-    }
-    
     const applyFilters = () => {
-      // Los filtros se aplican automáticamente a través del computed
+      loadAuditLogs()
       toast.info('Filtros aplicados')
     }
     
@@ -576,21 +556,35 @@ export default {
         dateFrom: '',
         dateTo: ''
       }
+      loadAuditLogs() // Re-load with no filters
       toast.info('Filtros limpiados')
     }
     
-    const exportAuditLog = () => {
-      // Simular exportación
-      toast.success('Registro exportado correctamente')
+    const exportAuditLog = async () => {
+      try {
+        const response = await auditService.exportAuditLogs(filters.value)
+        toast.success(response.message || 'Registro exportado correctamente')
+      } catch (error) {
+        console.error('Error exporting audit log:', error)
+        toast.error('Error al exportar el registro de auditoría')
+      }
     }
     
-    const refreshAuditLog = () => {
-      loadAuditLogs()
-      toast.info('Actualizando registro de auditoría...')
+    const refreshAuditLog = async () => {
+      try {
+        await loadAuditLogs()
+        toast.success('Registro de auditoría actualizado correctamente')
+      } catch (error) {
+        console.error('Error refreshing audit log:', error)
+        toast.error('Error al actualizar el registro de auditoría')
+      }
     }
     
-    onMounted(() => {
-      loadAuditLogs()
+    onMounted(async () => {
+      await Promise.all([
+        loadAuditLogs(),
+        loadAuditStats()
+      ])
     })
     
     return {
@@ -612,7 +606,8 @@ export default {
       applyFilters,
       clearFilters,
       exportAuditLog,
-      refreshAuditLog
+      refreshAuditLog,
+      loadAuditStats
     }
   }
 }

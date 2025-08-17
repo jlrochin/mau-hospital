@@ -13,7 +13,7 @@ app.use(createPinia())
 app.use(router)
 app.use(Toast, {
     timeout: 5000,
-    position: 'top-right',
+    position: 'bottom-right',
     closeOnClick: true,
     pauseOnHover: true,
     draggable: true,

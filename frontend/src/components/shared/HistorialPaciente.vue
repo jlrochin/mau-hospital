@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
     <div class="bg-background-card rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
       <!-- Header -->
       <div class="sticky-header">
@@ -225,14 +225,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import api from '@/services/api'
+import { patientsService } from '@/services/patients'
 import {
   XMarkIcon,
   DocumentTextIcon,
   ClockIcon,
   CheckCircleIcon,
   ShoppingBagIcon,
-  EyeIcon
+  EyeIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/vue/24/outline'
 
 import DetalleReceta from './DetalleReceta.vue'
@@ -246,6 +247,7 @@ export default {
     CheckCircleIcon,
     ShoppingBagIcon,
     EyeIcon,
+    ExclamationTriangleIcon,
     DetalleReceta
   },
   props: {
@@ -255,7 +257,7 @@ export default {
     }
   },
   emits: ['close'],
-  setup(props) {
+  setup(props, { emit }) {
     const toast = useToast()
     
     const historyData = ref(null)
@@ -270,11 +272,11 @@ export default {
       
       let recipes = [...historyData.value.recetas]
       
-      if (searchQuery.value.trim()) {
+      if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase()
         recipes = recipes.filter(recipe => 
-          recipe.folio_receta.toString().includes(query) ||
-          recipe.servicio_solicitante.toLowerCase().includes(query)
+          recipe.folio_receta?.toLowerCase().includes(query) ||
+          recipe.servicio_solicitante?.toLowerCase().includes(query)
         )
       }
       
@@ -293,8 +295,8 @@ export default {
       try {
         isLoading.value = true
         
-        const response = await api.get(`/pacientes/${props.patient.expediente}/historial/`)
-        historyData.value = response.data
+        const response = await patientsService.getPatientHistory(props.patient.expediente)
+        historyData.value = response
         
       } catch (error) {
         console.error('Error loading patient history:', error)
@@ -310,9 +312,9 @@ export default {
     
     const viewRecipeDetails = async (recipe) => {
       try {
-        // Obtener la receta completa con medicamentos
-        const response = await api.get(`/recetas/${recipe.folio_receta}/`)
-        selectedRecipe.value = response.data
+        // Por ahora, usar la receta básica del historial
+        // En el futuro, se podría implementar un endpoint específico para recetas
+        selectedRecipe.value = recipe
       } catch (error) {
         console.error('Error loading recipe details:', error)
         toast.error('Error al cargar los detalles de la receta')

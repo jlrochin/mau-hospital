@@ -250,6 +250,14 @@ export const useAuthStore = defineStore('auth', () => {
             })
         }
 
+        if (effectiveRole.value === 'ADMIN' || canValidateRecipes.value) {
+            routes.push({
+                name: 'registro-movimientos',
+                title: 'Registro de Movimientos',
+                icon: 'DocumentTextIcon'
+            })
+        }
+
         if (effectiveRole.value === 'ADMIN' || canDispensePharmacy.value) {
             routes.push({
                 name: 'inventario',

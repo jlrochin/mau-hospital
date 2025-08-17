@@ -71,13 +71,13 @@ class CIE10MexicoAdmin(admin.ModelAdmin):
     """Configuración del admin para el modelo CIE10Mexico"""
     
     list_display = [
-        'codigo', 'descripcion_corta', 'capitulo', 'categoria',
-        'tipo', 'genero_aplicable', 'es_mortalidad', 'es_morbilidad', 'activo'
+        'codigo', 'descripcion_corta', 'clave_capitulo', 'letra',
+        'prinmorta', 'es_mortalidad', 'activo'
     ]
     
     list_filter = [
-        'capitulo', 'tipo', 'genero_aplicable', 'es_mortalidad',
-        'es_morbilidad', 'activo', 'fecha_creacion'
+        'clave_capitulo', 'letra', 'es_mortalidad', 'es_morbilidad',
+        'activo', 'prinmorta', 'fecha_creacion'
     ]
     
     search_fields = [
@@ -94,22 +94,37 @@ class CIE10MexicoAdmin(admin.ModelAdmin):
         ('Información Básica', {
             'fields': (
                 'codigo', 'descripcion', 'descripcion_corta',
-                'capitulo', 'categoria', 'tipo'
+                'capitulo', 'categoria', 'tipo', 'letra', 'no_caracteres'
+            )
+        }),
+        ('Información del Capítulo', {
+            'fields': (
+                'clave_capitulo', 'nombre_capitulo', 'lista1', 'grupo1', 'lista5'
             )
         }),
         ('Aplicabilidad', {
             'fields': (
-                'genero_aplicable', 'edad_minima', 'edad_maxima'
+                'genero_aplicable', 'es_mortalidad', 'es_morbilidad', 'activo'
             )
         }),
-        ('Características', {
+        ('Epidemiología', {
             'fields': (
-                'es_mortalidad', 'es_morbilidad', 'activo'
-            )
+                'prinmorta', 'prinmorb', 'epi_clave', 'epi_clave_desc',
+                'es_causes', 'num_causes'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Vigilancia', {
+            'fields': (
+                'es_suive_morta', 'es_suive_morb', 'es_suive_est_epi',
+                'notdiaria', 'notsemanal', 'sistema_especial'
+            ),
+            'classes': ('collapse',)
         }),
         ('Metadatos', {
             'fields': (
-                'fecha_creacion', 'fecha_actualizacion'
+                'fecha_creacion', 'fecha_actualizacion', 'consecutivo',
+                'year_modifi', 'year_aplicacion', 'valid'
             ),
             'classes': ('collapse',)
         }),

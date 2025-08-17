@@ -173,7 +173,7 @@ export default {
       default: ''
     }
   },
-  emits: ['update:modelValue', 'code-selected'],
+  emits: ['update:modelValue', 'code-selected', 'fill-patologia'],
   setup(props, { emit }) {
     const toast = useToast()
     
@@ -224,6 +224,10 @@ export default {
       showDropdown.value = false
       emit('update:modelValue', code.codigo)
       emit('code-selected', code)
+      
+      // Emitir evento para llenar patología principal
+      emit('fill-patologia', code.descripcion_mostrar || code.descripcion_corta || code.descripcion)
+      
       toast.success(`Código CIE-10 seleccionado: ${code.codigo}`)
     }
 
@@ -232,6 +236,9 @@ export default {
       searchQuery.value = ''
       emit('update:modelValue', '')
       emit('code-selected', null)
+      
+      // Limpiar patología principal
+      emit('fill-patologia', '')
     }
 
     const handleBlur = () => {

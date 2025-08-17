@@ -26,4 +26,5 @@ urlpatterns = [
     path('api/inventory/', include('apps.inventory.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/mobile/', include('apps.mobile_api.urls')),
+    path('api/', include('apps.audit.urls')),
 ]
