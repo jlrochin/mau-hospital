@@ -5,35 +5,41 @@ Sistema integral de gestión hospitalaria desarrollado con Django (Backend) y Vu
 ## ✨ Características Principales
 
 ### 🔐 **Gestión de Usuarios y Autenticación**
+
 - Sistema de autenticación JWT
 - Roles y permisos diferenciados
 - Panel de administración personalizado
 
 ### 👥 **Gestión de Pacientes**
+
 - Registro completo de pacientes con campos separados (nombre, apellido paterno, apellido materno)
 - Historial médico completo
 - Búsqueda avanzada con filtros múltiples
 - Verificación de duplicados automática
 
 ### 📋 **Sistema de Prescripciones**
+
 - Creación y gestión de recetas médicas
 - Integración con catálogo CIE-10 oficial de México
 - Flujo de validación y dispensación
 - Seguimiento de estado de recetas
 
 ### 💊 **Gestión de Medicamentos e Inventario**
+
 - Control de stock en tiempo real
 - Gestión de lotes y fechas de caducidad
 - Alertas automáticas de inventario bajo
 - Trazabilidad completa de medicamentos
 
 ### 🏥 **Módulos Especializados**
+
 - **CMI (Centro de Mezclas Intravenosas)**: Preparación de mezclas parenterales
 - **Farmacia**: Dispensación de medicamentos
 - **Validación**: Revisión y aprobación de prescripciones
 - **Auditoría**: Registro completo de actividades del sistema
 
 ### 📊 **Reportes y Analytics**
+
 - Dashboard ejecutivo con métricas clave
 - Reportes personalizables
 - Exportación de datos en múltiples formatos
@@ -42,6 +48,7 @@ Sistema integral de gestión hospitalaria desarrollado con Django (Backend) y Vu
 ## 🛠️ Tecnologías Utilizadas
 
 ### **Backend**
+
 - **Django 4.2.7** - Framework web robusto y escalable
 - **Django REST Framework** - API REST completa
 - **SQLite/PostgreSQL** - Base de datos relacional
@@ -49,6 +56,7 @@ Sistema integral de gestión hospitalaria desarrollado con Django (Backend) y Vu
 - **Python 3.13** - Lenguaje de programación
 
 ### **Frontend**
+
 - **Vue.js 3** - Framework progresivo de JavaScript
 - **Vue Router** - Enrutamiento de aplicaciones
 - **Vuex/Pinia** - Gestión de estado
@@ -56,6 +64,7 @@ Sistema integral de gestión hospitalaria desarrollado con Django (Backend) y Vu
 - **Vite** - Herramienta de construcción rápida
 
 ### **Características Técnicas**
+
 - **Arquitectura SPA** - Aplicación de página única
 - **Responsive Design** - Compatible con todos los dispositivos
 - **PWA Ready** - Preparado para aplicación web progresiva
@@ -64,18 +73,21 @@ Sistema integral de gestión hospitalaria desarrollado con Django (Backend) y Vu
 ## 🚀 Instalación y Configuración
 
 ### **Prerrequisitos**
+
 - Python 3.11+
 - Node.js 18+
 - npm o yarn
 - Git
 
 ### **1. Clonar el Repositorio**
+
 ```bash
 git clone https://github.com/tu-usuario/mau-hospital.git
 cd mau-hospital
 ```
 
 ### **2. Configurar Backend**
+
 ```bash
 cd backend
 python -m venv venv
@@ -87,6 +99,7 @@ python manage.py runserver
 ```
 
 ### **3. Configurar Frontend**
+
 ```bash
 cd frontend
 npm install
@@ -94,6 +107,7 @@ npm run dev
 ```
 
 ### **4. Cargar Datos Iniciales (Opcional)**
+
 ```bash
 cd backend
 python manage.py load_cie10_mexico
@@ -128,6 +142,7 @@ MAU/
 ## 🔧 Configuración del Entorno
 
 ### **Variables de Entorno**
+
 Crear archivo `.env` en el directorio `backend/`:
 
 ```env
@@ -139,6 +154,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
 
 ### **Configuración de Base de Datos**
+
 El sistema está configurado para usar SQLite por defecto. Para producción, se recomienda PostgreSQL:
 
 ```python
@@ -157,11 +173,13 @@ DATABASES = {
 ## 📱 Uso del Sistema
 
 ### **Acceso Inicial**
+
 1. Navegar a `http://localhost:3000`
 2. Iniciar sesión con las credenciales del superusuario
 3. Comenzar a registrar pacientes y crear prescripciones
 
 ### **Flujo de Trabajo Típico**
+
 1. **Registro de Paciente** → Crear nuevo paciente con datos completos
 2. **Crear Prescripción** → Asignar medicamentos y dosis
 3. **Validación** → Revisar y aprobar la prescripción
@@ -171,12 +189,14 @@ DATABASES = {
 ## 🧪 Pruebas
 
 ### **Backend**
+
 ```bash
 cd backend
 python manage.py test
 ```
 
 ### **Frontend**
+
 ```bash
 cd frontend
 npm run test
@@ -185,11 +205,13 @@ npm run test
 ## 📦 Despliegue
 
 ### **Producción con Docker**
+
 ```bash
 docker-compose up -d
 ```
 
 ### **Despliegue Manual**
+
 1. Configurar servidor web (Nginx/Apache)
 2. Configurar base de datos de producción
 3. Ejecutar `python manage.py collectstatic`
@@ -202,6 +224,7 @@ docker-compose up -d
 **NO SE PERMITEN** contribuciones externas sin autorización previa.
 
 Para solicitar permisos de contribución o colaboración:
+
 - **Email**: legal@mauhospital.com
 - **Proceso**: Solicitud formal por escrito con propuesta detallada
 - **Evaluación**: Revisión interna por el equipo de MAU Hospital
@@ -213,7 +236,7 @@ Para solicitar permisos de contribución o colaboración:
 
 Este proyecto es **SOFTWARE PROPIETARIO** de MAU Hospital. Todos los derechos reservados.
 
-**PROHIBIDO** el uso, copia, modificación, distribución, publicación, sublicencia y/o venta 
+**PROHIBIDO** el uso, copia, modificación, distribución, publicación, sublicencia y/o venta
 sin permiso expreso por escrito de MAU Hospital.
 
 Para solicitar permisos de uso, contactar a: legal@mauhospital.com
@@ -234,6 +257,7 @@ Ver el archivo `LICENSE` para los términos completos de la licencia.
 ## 🔄 Changelog
 
 ### **v1.0.0** (Agosto 2025)
+
 - ✅ Sistema base completo
 - ✅ Gestión de pacientes con campos separados
 - ✅ Catálogo CIE-10 oficial de México
