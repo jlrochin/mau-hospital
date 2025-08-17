@@ -197,15 +197,28 @@ docker-compose up -d
 
 ## 🤝 Contribución
 
-1. Fork el proyecto
-2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir un Pull Request
+**IMPORTANTE**: Este es software propietario de MAU Hospital.
+
+**NO SE PERMITEN** contribuciones externas sin autorización previa.
+
+Para solicitar permisos de contribución o colaboración:
+- **Email**: legal@mauhospital.com
+- **Proceso**: Solicitud formal por escrito con propuesta detallada
+- **Evaluación**: Revisión interna por el equipo de MAU Hospital
+- **Aprobación**: Permiso expreso requerido para cualquier modificación
+
+**Prohibida** la distribución, modificación o uso comercial sin autorización.
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+Este proyecto es **SOFTWARE PROPIETARIO** de MAU Hospital. Todos los derechos reservados.
+
+**PROHIBIDO** el uso, copia, modificación, distribución, publicación, sublicencia y/o venta 
+sin permiso expreso por escrito de MAU Hospital.
+
+Para solicitar permisos de uso, contactar a: legal@mauhospital.com
+
+Ver el archivo `LICENSE` para los términos completos de la licencia.
 
 ## 👨‍💻 Equipo de Desarrollo
 
