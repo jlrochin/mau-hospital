@@ -190,9 +190,7 @@ export default {
   props: {
     tipoReceta: {
       type: String,
-      required: true,
-      default: 'FARMACIA',
-      validator: value => ['FARMACIA', 'CMI'].includes(value)
+      default: 'FARMACIA'
     },
     modelValue: {
       type: Object,
@@ -447,12 +445,35 @@ export default {
 }
 
 .form-input {
-  @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500;
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #111827;
+  background-color: #ffffff;
+  transition: all 0.15s ease-in-out;
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
 }
 
 .form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Error state handled by Tailwind classes directly */
+.form-input.border-red-500 {
+  border-color: #ef4444;
+}
+
+.form-input.border-red-500:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
 </style>

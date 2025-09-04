@@ -10,20 +10,44 @@
     
     <!-- Contenido principal -->
     <router-view v-else />
+
+    <!-- Controlador de tours - Solo mostrar cuando el usuario esté autenticado -->
+    <TourController 
+      v-if="!isInitializing && authStore.isAuthenticated"
+      :auto-start-welcome="true"
+      :show-button="true"
+    />
+
+    <!-- Modal de advertencia de inactividad -->
+    <InactivityWarning
+      v-if="!isInitializing && authStore.isAuthenticated"
+      :is-visible="inactivityWarning.isWarningVisible.value"
+      :format-time-remaining="inactivityWarning.formatTimeRemaining"
+    />
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
+import TourController from '@/components/TourController.vue'
+import InactivityWarning from '@/components/InactivityWarning.vue'
+import { useInactivityTimer } from '@/composables/useInactivityTimer'
 
 export default {
   name: 'App',
+  components: {
+    TourController,
+    InactivityWarning
+  },
   setup() {
     const authStore = useAuthStore()
     const toast = useToast()
     const isInitializing = ref(true)
+
+    // Inicializar timer de inactividad (60 segundos total con advertencia a los 20 segundos)
+    const inactivityWarning = useInactivityTimer(60, 20)
 
     const initializeApp = async () => {
       try {
@@ -39,12 +63,25 @@ export default {
       }
     }
 
+    // Vigilar cambios en el estado de autenticación
+    watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+      if (isAuthenticated) {
+        // Usuario se logueó - iniciar monitoring
+        inactivityWarning.startMonitoring()
+      } else {
+        // Usuario se deslogueó - detener monitoring
+        inactivityWarning.stopMonitoring()
+      }
+    })
+
     onMounted(() => {
       initializeApp()
     })
 
     return {
-      isInitializing
+      authStore,
+      isInitializing,
+      inactivityWarning
     }
   }
 }

@@ -49,6 +49,8 @@
               </p>
             </div>
 
+            <!-- reCAPTCHA eliminado -->
+
             <div v-if="loginError" class="text-center">
               <p class="form-error">{{ loginError }}</p>
             </div>
@@ -57,6 +59,7 @@
               type="submit"
               :disabled="isLoading"
               class="btn-primary w-full flex items-center justify-center"
+              :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
             >
               <svg
                 v-if="isLoading"
@@ -102,6 +105,7 @@ import { useToast } from 'vue-toastification'
 
 export default {
   name: 'Login',
+  components: {},
   setup() {
     const router = useRouter()
     const authStore = useAuthStore()
@@ -109,6 +113,7 @@ export default {
     
     const isLoading = ref(false)
     const loginError = ref('')
+  // reCAPTCHA eliminado
     
     const form = reactive({
       username: '',
@@ -139,8 +144,12 @@ export default {
         return false
       }
       
+  // reCAPTCHA eliminado
+      
       return true
     }
+    
+  // reCAPTCHA eliminado
     
     const handleSubmit = async () => {
       if (!validateForm()) return
@@ -149,20 +158,24 @@ export default {
         isLoading.value = true
         loginError.value = ''
         
-        const result = await authStore.login({
+        const loginData = {
           username: form.username,
           password: form.password
-        })
+        }
+        
+        const result = await authStore.login(loginData)
         
         if (result.success) {
           toast.success(`¡Bienvenido, ${result.user.first_name}!`)
           router.push('/')
         } else {
           loginError.value = result.error
+          // reCAPTCHA eliminado
         }
       } catch (error) {
         console.error('Error en login:', error)
         loginError.value = 'Error inesperado. Inténtalo de nuevo.'
+  // reCAPTCHA eliminado
       } finally {
         isLoading.value = false
       }
@@ -173,7 +186,9 @@ export default {
       errors,
       isLoading,
       loginError,
-      handleSubmit
+      
+      handleSubmit,
+      
     }
   }
 }

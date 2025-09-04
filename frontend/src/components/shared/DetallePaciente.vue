@@ -17,6 +17,13 @@
               Editar
             </button>
             <button
+              @click="handleAddRecipe"
+              class="inline-flex items-center px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+            >
+              <PlusIcon class="h-4 w-4 mr-2" />
+              Nueva Receta
+            </button>
+            <button
               @click="$emit('view-history')"
               class="inline-flex items-center px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
             >
@@ -35,7 +42,7 @@
       
       <!-- Contenido del modal - scrolleable -->
       <div class="flex-1 overflow-auto px-8 py-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <!-- Información básica -->
           <div class="space-y-5">
             <h3 class="text-lg font-semibold text-secondary-900 border-b border-gray-200 pb-3">
@@ -96,7 +103,7 @@
             </div>
           </div>
 
-          <!-- Información médica -->
+                    <!-- Información Médica -->
           <div class="space-y-5">
             <h3 class="text-lg font-semibold text-secondary-900 border-b border-gray-200 pb-3">
               Información Médica
@@ -106,7 +113,7 @@
               <div class="flex justify-between items-center py-3 border-b border-gray-100">
                 <span class="font-medium text-secondary-600 text-sm">Patología:</span>
                 <span class="text-secondary-900 text-sm bg-gray-50 px-3 py-1.5 rounded-md">
-                  {{ patient.patologia || 'No especificado' }}
+                  {{ getPrincipalPathology() || 'No especificado' }}
                 </span>
               </div>
               
@@ -114,15 +121,45 @@
               <div class="flex justify-between items-center py-3 border-b border-gray-100">
                 <span class="font-medium text-secondary-600 text-sm">CIE-10 Principal:</span>
                 <span class="text-secondary-900 text-sm bg-blue-50 px-3 py-1.5 rounded-md">
-                  {{ patient.cie10 || 'No especificado' }}
+                  {{ getPrincipalCIE10() || patient.cie10 || 'No especificado' }}
                 </span>
               </div>
               
               <div class="flex justify-between items-center py-3 border-b border-gray-100">
                 <span class="font-medium text-secondary-600 text-sm">Fecha Diagnóstico:</span>
                 <span class="text-secondary-900 text-sm">
-                  {{ formatDate(patient.fecha_diagnostico) || 'No especificado' }}
+                  {{ getPrincipalDiagnosisDate() || formatDate(patient.fecha_diagnostico) || 'No especificado' }}
                 </span>
+              </div>
+              
+              <div v-if="patient.cie10_codes && patient.cie10_codes.filter(c => !c.es_principal).length > 0" class="py-3 border-b border-gray-100">
+                <span class="font-medium text-secondary-600 text-sm block mb-3">Códigos CIE-10 Adicionales:</span>
+                <div class="space-y-3">
+                  <div
+                    v-for="code in patient.cie10_codes.filter(c => !c.es_principal)"
+                    :key="code.id || code.cie10"
+                    class="bg-gray-50 border border-gray-200 rounded-lg p-3"
+                  >
+                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span class="font-medium text-secondary-600 text-sm">CIE-10 Adicional:</span>
+                      <span class="text-secondary-900 text-sm bg-blue-50 px-3 py-1.5 rounded-md">
+                        {{ code.cie10 || code.codigo || 'N/A' }}
+                      </span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                      <span class="font-medium text-secondary-600 text-sm">Patología:</span>
+                      <span class="text-secondary-900 text-sm bg-gray-50 px-3 py-1.5 rounded-md">
+                        {{ code.cie10_info?.descripcion_corta || code.cie10_info?.descripcion || 'No especificado' }}
+                      </span>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                      <span class="font-medium text-secondary-600 text-sm">Fecha Diagnóstico:</span>
+                      <span class="text-secondary-900 text-sm">
+                        {{ formatDate(code.fecha_diagnostico) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div v-if="patient.alergias" class="flex justify-between items-center py-3 border-b border-gray-100">
@@ -134,75 +171,7 @@
             </div>
           </div>
 
-          <!-- Códigos CIE-10 Adicionales -->
-          <div class="space-y-5">
-            <h3 class="text-lg font-semibold text-secondary-900 border-b border-gray-200 pb-3">
-              Códigos CIE-10 Adicionales
-            </h3>
-            
-            <div v-if="patient.cie10_codes && patient.cie10_codes.length > 0" class="space-y-3">
-              <div
-                v-for="code in patient.cie10_codes"
-                :key="code.id"
-                class="bg-gray-50 border border-gray-200 rounded-lg p-3"
-              >
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <div class="flex items-center space-x-2 mb-2">
-                      <!-- Indicador de diagnóstico principal -->
-                      <span
-                        v-if="code.es_principal"
-                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success text-white"
-                      >
-                        <StarIcon class="h-3 w-3 mr-1" />
-                        Principal
-                      </span>
-                      
-                      <!-- Código CIE-10 -->
-                      <span class="font-mono font-bold text-primary-600 bg-white px-2 py-1 rounded border">
-                        {{ code.codigo }}
-                      </span>
-                      
-                      <!-- Capítulo -->
-                      <span class="text-xs text-secondary-600 bg-white px-2 py-1 rounded border">
-                        Cap. {{ code.capitulo }}
-                      </span>
-                    </div>
-                    
-                    <!-- Descripción -->
-                    <h5 class="font-medium text-secondary-900 text-sm mb-1">
-                      {{ code.descripcion_corta }}
-                    </h5>
-                    
-                    <!-- Fecha y observaciones -->
-                    <div class="flex items-center space-x-4 text-xs text-secondary-600">
-                      <span>
-                        <CalendarIcon class="h-3 w-3 inline mr-1" />
-                        {{ formatDate(code.fecha_diagnostico) }}
-                      </span>
-                      
-                      <span v-if="code.observaciones" class="flex items-center">
-                        <DocumentTextIcon class="h-3 w-3 inline mr-1" />
-                        {{ code.observaciones }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div v-else class="text-center py-4 text-secondary-500">
-              <DocumentTextIcon class="h-8 w-8 mx-auto mb-2 text-secondary-300" />
-              <p class="text-sm">No hay códigos CIE-10 adicionales</p>
-            </div>
-            
-            <!-- Nota informativa -->
-            <div class="pt-3 text-center">
-              <p class="text-xs text-secondary-500">
-                Para gestionar códigos CIE-10, edita el paciente
-              </p>
-            </div>
-          </div>
+
 
           <!-- Información de contacto -->
           <div class="space-y-5">
@@ -251,45 +220,6 @@
             </div>
           </div>
 
-          <!-- Información adicional -->
-          <div class="space-y-5">
-            <h3 class="text-lg font-semibold text-secondary-900 border-b border-gray-200 pb-3">
-              Información Adicional
-            </h3>
-            
-            <div class="space-y-4">
-              <div v-if="patient.medicamentos_actuales" class="flex justify-between items-center py-3 border-b border-gray-100">
-                <span class="font-medium text-secondary-600 text-sm">Medicamentos Actuales:</span>
-                <span class="text-secondary-900 text-sm bg-blue-50 px-3 py-1.5 rounded-md">
-                  {{ patient.medicamentos_actuales }}
-                </span>
-              </div>
-              
-              <div v-if="patient.antecedentes" class="flex justify-between items-center py-3 border-b border-gray-100">
-                <span class="font-medium text-secondary-600 text-sm">Antecedentes Médicos:</span>
-                <span class="text-secondary-900 text-sm bg-gray-50 px-3 py-1.5 rounded-md">
-                  {{ patient.antecedentes }}
-                </span>
-              </div>
-              
-              <div v-if="patient.observaciones" class="flex justify-between items-center py-3 border-b border-gray-100">
-                <span class="font-medium text-secondary-600 text-sm">Observaciones:</span>
-                <span class="text-secondary-900 text-sm bg-yellow-50 px-3 py-1.5 rounded-md">
-                  {{ patient.observaciones }}
-                </span>
-              </div>
-              
-              <div v-if="patient.fecha_ultima_consulta" class="flex justify-between items-center py-3 border-b border-gray-100">
-                <span class="font-medium text-secondary-600 text-sm">Última Consulta:</span>
-                <span class="text-secondary-900 text-sm">{{ formatDate(patient.fecha_ultima_consulta) || 'No disponible' }}</span>
-              </div>
-              
-              <div v-if="patient.medico_tratante" class="flex justify-between items-center py-3 border-b border-gray-100">
-                <span class="font-medium text-secondary-600 text-sm">Médico Tratante:</span>
-                <span class="text-secondary-900 text-sm">{{ patient.medico_tratante }}</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Estado del paciente -->
@@ -363,7 +293,7 @@ export default {
       default: false
     }
   },
-  emits: ['close', 'edit-patient', 'view-history'],
+  emits: ['close', 'edit-patient', 'view-history', 'addRecipe'],
   setup(props, { emit }) {
     const formatDate = (dateString) => {
       if (!dateString) return 'No especificado'
@@ -399,12 +329,43 @@ export default {
       return bloodTypeMap[bloodType] || bloodType
     }
     
+    const getPrincipalCIE10 = () => {
+      if (!props.patient.cie10_codes || !Array.isArray(props.patient.cie10_codes)) {
+        return null;
+      }
+      const principalCode = props.patient.cie10_codes.find(code => code.es_principal);
+      return principalCode ? principalCode.cie10 : null;
+    };
 
+    const getPrincipalDiagnosisDate = () => {
+      if (!props.patient.cie10_codes || !Array.isArray(props.patient.cie10_codes)) {
+        return null;
+      }
+      const principalCode = props.patient.cie10_codes.find(code => code.es_principal);
+      return principalCode ? formatDate(principalCode.fecha_diagnostico) : null;
+    };
+
+    const getPrincipalPathology = () => {
+      if (!props.patient.cie10_codes || !Array.isArray(props.patient.cie10_codes)) {
+        return null;
+      }
+      const principalCode = props.patient.cie10_codes.find(code => code.es_principal);
+      return principalCode?.cie10_info?.descripcion_corta || props.patient.patologia;
+    };
+
+    const handleAddRecipe = () => {
+      console.log('handleAddRecipe ejecutado, emitiendo addRecipe')
+      emit('addRecipe')
+    }
     
     return {
       formatDate,
       getGenderDisplay,
       getBloodTypeDisplay,
+      getPrincipalCIE10,
+      getPrincipalDiagnosisDate,
+      getPrincipalPathology,
+      handleAddRecipe,
     }
   }
 }

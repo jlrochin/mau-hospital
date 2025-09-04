@@ -203,7 +203,22 @@ def real_time_metrics(request):
 def audit_logs(request):
     """Endpoint para obtener logs de auditoría"""
     
-    if not request.user.role in ['ADMIN', 'ATENCION_USUARIO']:
+    # Obtener el usuario real para acceder al role
+    try:
+        if hasattr(request.user, 'role'):
+            user_role = request.user.role
+        else:
+            # Para TokenUser de JWT, obtener el usuario real
+            from apps.authentication.models import User
+            user = User.objects.get(id=request.user.id)
+            user_role = user.role
+    except:
+        return Response(
+            {'error': 'No tiene permisos para ver logs de auditoría'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    if not user_role in ['ADMIN', 'ATENCION_USUARIO']:
         return Response(
             {'error': 'No tiene permisos para ver logs de auditoría'},
             status=status.HTTP_403_FORBIDDEN
@@ -291,7 +306,22 @@ def generate_custom_report(request):
 def system_health(request):
     """Endpoint para verificar la salud del sistema"""
     
-    if request.user.role != 'ADMIN':
+    # Obtener el usuario real para acceder al role
+    try:
+        if hasattr(request.user, 'role'):
+            user_role = request.user.role
+        else:
+            # Para TokenUser de JWT, obtener el usuario real
+            from apps.authentication.models import User
+            user = User.objects.get(id=request.user.id)
+            user_role = user.role
+    except:
+        return Response(
+            {'error': 'Solo administradores pueden ver la salud del sistema'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    if user_role != 'ADMIN':
         return Response(
             {'error': 'Solo administradores pueden ver la salud del sistema'},
             status=status.HTTP_403_FORBIDDEN

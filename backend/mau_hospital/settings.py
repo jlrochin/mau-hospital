@@ -194,6 +194,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3001",
+    "http://localhost:3002",
+    "http://127.0.0.1:3002",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
 ]
@@ -214,6 +216,10 @@ CORS_ALLOWED_HEADERS = [
 
 # Custom user model
 AUTH_USER_MODEL = 'authentication.User'
+
+# Configuración de reCAPTCHA
+RECAPTCHA_SITE_KEY = config('RECAPTCHA_SITE_KEY', default='6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI')
+RECAPTCHA_SECRET_KEY = config('RECAPTCHA_SECRET_KEY', default='6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe')
 
 # Configuración de logging
 LOGGING = {

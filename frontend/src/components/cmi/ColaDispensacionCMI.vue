@@ -258,6 +258,7 @@ export default {
     const isLoading = ref(false)
     const searchQuery = ref('')
     const selectedPriority = ref('')
+    const sortBy = ref('prioridad')
     const selectedRecipe = ref(null)
     const preparingRecipe = ref(null)
     const preparingRecipes = ref(new Set())
@@ -377,6 +378,7 @@ export default {
       isLoading,
       searchQuery,
       selectedPriority,
+      sortBy,
       selectedRecipe,
       preparingRecipe,
       preparingRecipes,

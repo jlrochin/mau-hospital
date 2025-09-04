@@ -21,6 +21,10 @@ urlpatterns = [
     path('<int:receta_id>/detalles/<int:detalle_id>/lotes/', views.agregar_lote_medicamento, name='agregar_lote'),
     path('<int:receta_id>/detalles/<int:detalle_id>/lotes/list/', views.obtener_lotes_medicamento, name='obtener_lotes'),
     
+    # Verificación de stock
+    path('stock/<str:codigo_medicamento>/', views.verificar_stock_medicamento, name='verificar_stock'),
+    path('inventario/', views.obtener_inventario_disponible, name='inventario_disponible'),
+    
     # Recetas completadas
     path('completadas/', views.recetas_completadas, name='recetas_completadas'),
     

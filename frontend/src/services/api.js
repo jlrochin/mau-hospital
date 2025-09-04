@@ -13,6 +13,11 @@ const api = axios.create({
 // Interceptor para requests
 api.interceptors.request.use(
     (config) => {
+        // Validar que la URL no contenga 'undefined'
+        if (config.url && config.url.includes('undefined')) {
+            return Promise.reject(new Error('URL malformada: contiene undefined'))
+        }
+
         const token = localStorage.getItem('access_token')
         if (token) {
             config.headers.Authorization = `Bearer ${token}`

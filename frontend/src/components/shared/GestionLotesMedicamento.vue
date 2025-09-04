@@ -47,6 +47,52 @@
           </div>
         </div>
 
+        <!-- Información de Stock en Inventario -->
+        <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-medium text-blue-900">Stock en Inventario</h4>
+            <button 
+              @click="verificarStock"
+              :disabled="verificandoStock"
+              class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {{ verificandoStock ? 'Verificando...' : 'Actualizar' }}
+            </button>
+          </div>
+          
+          <div v-if="verificandoStock" class="mt-2 text-sm text-blue-600">
+            Verificando disponibilidad...
+          </div>
+          
+          <div v-else-if="stockInfo" class="mt-2">
+            <div v-if="stockInfo.disponible" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span class="font-medium text-blue-700">Disponible:</span>
+                <div class="text-blue-900">{{ stockInfo.cantidad_disponible }} {{ stockInfo.unidad_medida }}</div>
+              </div>
+              <div v-if="stockInfo.lote">
+                <span class="font-medium text-blue-700">Lote:</span>
+                <div class="text-blue-900">{{ stockInfo.lote }}</div>
+              </div>
+              <div v-if="stockInfo.fecha_vencimiento">
+                <span class="font-medium text-blue-700">Vencimiento:</span>
+                <div class="text-blue-900">{{ new Date(stockInfo.fecha_vencimiento).toLocaleDateString('es-ES') }}</div>
+              </div>
+              <div>
+                <span class="font-medium text-blue-700">Estado:</span>
+                <div class="text-green-600 font-medium">✓ Disponible</div>
+              </div>
+            </div>
+            <div v-else class="text-red-600 font-medium">
+              ⚠️ {{ stockInfo.mensaje || 'Medicamento no disponible en inventario' }}
+            </div>
+          </div>
+          
+          <div v-else class="mt-2 text-sm text-gray-600">
+            Clave de medicamento no disponible para verificar stock
+          </div>
+        </div>
+
         <!-- Formulario para agregar nuevo lote -->
         <div v-if="cantidadPendiente > 0" class="card mb-6">
           <div class="card-header">
@@ -268,6 +314,8 @@ const emit = defineEmits(['close', 'loteAgregado'])
 const lotesExistentes = ref([])
 const isSubmitting = ref(false)
 const errorLoteDuplicado = ref(false)
+const stockInfo = ref(null)
+const verificandoStock = ref(false)
 
 // Nuevo lote
 const nuevoLote = ref({
@@ -305,6 +353,21 @@ const cargarLotes = async () => {
   }
 }
 
+const verificarStock = async () => {
+  if (!props.medicamento.clave_medicamento) return
+  
+  verificandoStock.value = true
+  try {
+    const response = await apiService.get(`/prescriptions/stock/${props.medicamento.clave_medicamento}/`)
+    stockInfo.value = response.data
+  } catch (error) {
+    console.error('Error al verificar stock:', error)
+    stockInfo.value = null
+  } finally {
+    verificandoStock.value = false
+  }
+}
+
 const agregarLote = async () => {
   if (isSubmitting.value) return
   
@@ -312,6 +375,14 @@ const agregarLote = async () => {
   if (nuevoLote.value.cantidad_dispensada > cantidadPendiente.value) {
     alert(`No puedes dispensar más de ${cantidadPendiente.value} ${props.medicamento.unidad_medida}. Solo quedan ${cantidadPendiente.value} por dispensar.`)
     return
+  }
+  
+  // Verificar stock disponible si tenemos información
+  if (stockInfo.value && stockInfo.value.disponible) {
+    if (nuevoLote.value.cantidad_dispensada > stockInfo.value.cantidad_disponible) {
+      alert(`Stock insuficiente. Solo hay ${stockInfo.value.cantidad_disponible} ${stockInfo.value.unidad_medida || props.medicamento.unidad_medida} disponibles en inventario.`)
+      return
+    }
   }
   
   // Verificar lote duplicado
@@ -343,6 +414,9 @@ const agregarLote = async () => {
       laboratorio: '',
       observaciones: ''
     }
+    
+    // Actualizar stock después de dispensar
+    await verificarStock()
     
     // Emitir evento para actualizar el componente padre con la información actualizada
     emit('loteAgregado', { 
@@ -378,6 +452,7 @@ const formatDate = (dateString) => {
 // Lifecycle
 onMounted(() => {
   cargarLotes()
+  verificarStock()
 })
 </script>
 

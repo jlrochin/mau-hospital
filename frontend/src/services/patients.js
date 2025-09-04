@@ -17,6 +17,9 @@ export const patientsService = {
 
     // Obtener paciente por expediente
     async getPatientByExpediente(expediente) {
+        if (!expediente) {
+            throw new Error('Expediente es requerido')
+        }
         const response = await api.get(`/pacientes/${expediente}/`)
         return response.data
     },
@@ -61,7 +64,6 @@ export const patientsService = {
             const response = await api.get('/pacientes/estadisticas/')
             return response.data
         } catch (error) {
-            console.error('Error obteniendo estadísticas:', error)
             return {
                 total: 0,
                 nuevosHoy: 0,
@@ -128,7 +130,6 @@ export const patientsService = {
             const response = await api.get('/pacientes/cie10/estadisticas-pacientes/')
             return response.data
         } catch (error) {
-            console.error('Error obteniendo estadísticas de CIE-10 por pacientes:', error)
             return {
                 total_pacientes_cie10: 0,
                 total_codigos_asignados: 0,

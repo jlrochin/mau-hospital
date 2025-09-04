@@ -12,8 +12,8 @@ User = get_user_model()
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
-    """Endpoint para autenticación de usuarios"""
-    serializer = LoginSerializer(data=request.data)
+    """Endpoint para autenticación de usuarios con validación reCAPTCHA"""
+    serializer = LoginSerializer(data=request.data, request=request)
     
     if serializer.is_valid():
         user = serializer.validated_data['user']
@@ -85,7 +85,17 @@ class UserListCreateView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         # Solo admins pueden ver todos los usuarios
-        if self.request.user.role == 'ADMIN':
+        try:
+            if hasattr(self.request.user, 'role'):
+                user_role = self.request.user.role
+            else:
+                # Para TokenUser de JWT, obtener el usuario real
+                user = User.objects.get(id=self.request.user.id)
+                user_role = user.role
+        except:
+            return User.objects.filter(id=self.request.user.id)
+        
+        if user_role == 'ADMIN':
             return User.objects.all()
         # Otros usuarios solo ven su propio perfil
         return User.objects.filter(id=self.request.user.id)
@@ -98,7 +108,17 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     def get_queryset(self):
         # Solo admins pueden acceder a cualquier usuario
-        if self.request.user.role == 'ADMIN':
+        try:
+            if hasattr(self.request.user, 'role'):
+                user_role = self.request.user.role
+            else:
+                # Para TokenUser de JWT, obtener el usuario real
+                user = User.objects.get(id=self.request.user.id)
+                user_role = user.role
+        except:
+            return User.objects.filter(id=self.request.user.id)
+        
+        if user_role == 'ADMIN':
             return User.objects.all()
         # Otros usuarios solo pueden acceder a su propio perfil
         return User.objects.filter(id=self.request.user.id)

@@ -38,12 +38,11 @@ class LoteDetalleRecetaSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoteDetalleReceta
         fields = [
-            'id', 'numero_lote', 'fecha_caducidad', 'laboratorio',
+            'id', 'lote', 'fecha_caducidad',
             'cantidad_dispensada', 'fecha_dispensacion', 'fecha_dispensacion_formatted',
-            'dispensado_por', 'dispensado_por_name', 'observaciones',
-            'created_at', 'updated_at'
+            'dispensado_por', 'dispensado_por_name', 'observaciones'
         ]
-        read_only_fields = ['id', 'fecha_dispensacion', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'fecha_dispensacion']
     
     def get_dispensado_por_name(self, obj):
         """Obtener nombre completo del usuario que dispensó"""
@@ -77,14 +76,52 @@ class LoteDetalleRecetaSerializer(serializers.ModelSerializer):
 
 
 class LoteDetalleRecetaCreateSerializer(serializers.ModelSerializer):
-    """Serializador para crear nuevos lotes"""
+    """Serializador para crear nuevos lotes con validación de inventario"""
     
     class Meta:
         model = LoteDetalleReceta
         fields = [
-            'numero_lote', 'fecha_caducidad', 'laboratorio',
+            'lote', 'fecha_caducidad',
             'cantidad_dispensada', 'observaciones'
         ]
+    
+    def validate_cantidad_dispensada(self, value):
+        """Validar cantidad a dispensar contra inventario disponible"""
+        if value <= 0:
+            raise serializers.ValidationError("La cantidad debe ser mayor a 0")
+        
+        # Verificar stock si el contexto incluye detalle_receta
+        detalle_receta = self.context.get('detalle_receta')
+        if detalle_receta:
+            # Importar aquí para evitar import circular
+            from apps.inventory.models import MedicamentoStock
+            
+            try:
+                medicamento_stock = MedicamentoStock.objects.get(
+                    medicamento_catalogo=detalle_receta.medicamento
+                )
+                
+                if medicamento_stock.available_stock < value:
+                    raise serializers.ValidationError(
+                        f"Stock insuficiente. Disponible: {medicamento_stock.available_stock}, "
+                        f"solicitado: {value}"
+                    )
+                    
+            except MedicamentoStock.DoesNotExist:
+                raise serializers.ValidationError(
+                    f"Medicamento '{detalle_receta.medicamento.nombre}' no encontrado en inventario"
+                )
+        
+        return value
+    
+    def validate_fecha_caducidad(self, value):
+        """Validar que la fecha de caducidad no haya pasado"""
+        from django.utils import timezone
+        
+        if value < timezone.now().date():
+            raise serializers.ValidationError("La fecha de caducidad no puede ser anterior a hoy")
+        
+        return value
     
     def create(self, validated_data):
         """Crear nuevo lote"""

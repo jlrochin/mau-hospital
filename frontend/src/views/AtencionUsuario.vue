@@ -49,6 +49,7 @@
             :isVisible="true"
             @edit-patient="onEditPatient"
             @view-history="onViewHistory"
+            @addRecipe="onAddRecipe"
             @close="selectedPatient = null"
           />
         </div>
@@ -78,6 +79,15 @@
           :isVisible="true"
           @close="closeHistoryModal"
         />
+
+        <!-- Modal para crear receta -->
+        <FormularioReceta
+          v-if="showCreateRecipe"
+          :patient="selectedPatient"
+          @close="closeRecipeModal"
+          @saved="onRecipeSaved"
+        />
+
 
         <!-- Estadísticas de pacientes -->
         <div v-if="!selectedPatient && !isSearchActive" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -209,6 +219,7 @@ import BuscarPaciente from '@/components/atencion-usuario/BuscarPaciente.vue'
 import DetallePaciente from '@/components/shared/DetallePaciente.vue'
 import FormularioPaciente from '@/components/atencion-usuario/FormularioPaciente.vue'
 import HistorialPaciente from '@/components/shared/HistorialPaciente.vue'
+import FormularioReceta from '@/components/shared/FormularioReceta.vue'
 
 // Importar servicios
 import { patientsService } from '@/services/patients'
@@ -224,7 +235,8 @@ export default {
     BuscarPaciente,
     DetallePaciente,
     FormularioPaciente,
-    HistorialPaciente
+    HistorialPaciente,
+    FormularioReceta
   },
   setup() {
     const toast = useToast()
@@ -234,6 +246,7 @@ export default {
     const editingPatient = ref(null)
     const showHistory = ref(false)
     const historyPatient = ref(null)
+    const showCreateRecipe = ref(false)
     const loading = ref(false)
     const recentPatients = ref([])
     const isSearchActive = ref(false)
@@ -314,9 +327,7 @@ export default {
     const onPatientSelected = async (patient) => {
       try {
         // Obtener datos completos del paciente al seleccionarlo
-        console.log('Obteniendo datos completos del paciente al seleccionarlo:', patient.expediente)
         const fullPatient = await patientsService.getPatientByExpediente(patient.expediente)
-        console.log('Datos completos obtenidos al seleccionar:', fullPatient)
         
         // Asignar el paciente completo
         selectedPatient.value = fullPatient
@@ -340,9 +351,7 @@ export default {
         historyPatient.value = null
         
         // Obtener datos completos del paciente antes de editar
-        console.log('Obteniendo datos completos del paciente:', patient.expediente)
         const fullPatient = await patientsService.getPatientByExpediente(patient.expediente)
-        console.log('Datos completos obtenidos:', fullPatient)
         
         // Luego abrir el modal de edición con datos completos
         editingPatient.value = fullPatient
@@ -363,6 +372,15 @@ export default {
       // Luego abrir el modal de historial
       showHistory.value = true
     }
+
+    const onAddRecipe = () => {
+      // Abrir el modal de receta manteniendo el paciente seleccionado
+      showCreateRecipe.value = true
+    }
+
+    const closeRecipeModal = () => {
+      showCreateRecipe.value = false
+    }
     
     const closeAllModals = () => {
       selectedPatient.value = null
@@ -370,6 +388,7 @@ export default {
       editingPatient.value = null
       showHistory.value = false
       historyPatient.value = null
+      showCreateRecipe.value = false
     }
     
     const closePatientModal = () => {
@@ -390,9 +409,7 @@ export default {
     const onPatientSaved = async (patient) => {
       try {
         // Obtener datos frescos del paciente después de guardar
-        console.log('Obteniendo datos frescos del paciente después de guardar:', patient.expediente)
         const freshPatient = await patientsService.getPatientByExpediente(patient.expediente)
-        console.log('Datos frescos obtenidos:', freshPatient)
         
         // Actualizar selectedPatient con los datos frescos
         selectedPatient.value = freshPatient
@@ -419,6 +436,21 @@ export default {
         ])
       }
     }
+
+    const onRecipeSaved = async () => {
+      try {
+        // Recargar datos
+        await Promise.all([
+          loadStats(),
+          loadRecentPatients()
+        ])
+        toast.success('Receta guardada correctamente')
+        closeRecipeModal()
+      } catch (error) {
+        console.error('Error al guardar la receta:', error)
+        toast.error('Error al guardar la receta: ' + (error.response?.data?.detail || error.message))
+      }
+    }
     
     // Cargar datos al montar el componente
     onMounted(async () => {
@@ -434,6 +466,7 @@ export default {
       editingPatient,
       showHistory,
       historyPatient,
+      showCreateRecipe,
       loading,
       recentPatients,
       stats,
@@ -442,13 +475,16 @@ export default {
       onSearchStateChanged,
       onEditPatient,
       onViewHistory,
+      onAddRecipe,
       closePatientModal,
       closeHistoryModal,
       closeAllModals,
       onPatientSaved,
       loadMorePatients,
       formatDate,
-      isSearchActive
+      isSearchActive,
+      closeRecipeModal,
+      onRecipeSaved
     }
   }
 }

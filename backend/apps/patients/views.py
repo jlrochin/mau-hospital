@@ -246,7 +246,7 @@ def buscar_cie10(request):
         })
         
     except Exception as e:
-        print(f"Error en buscar_cie10: {str(e)}")
+        # Error en buscar_cie10
         return Response({
             'error': 'Error interno del servidor'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

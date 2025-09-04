@@ -1,5 +1,15 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from .models_security import (
+    PasswordPolicy,
+    SecuritySettings,
+    UserSecurityProfile,
+    TwoFactorSecret,
+    IPWhitelist,
+    IPBlacklist,
+    SecurityLog,
+    ActiveSession,
+)
 
 class User(AbstractUser):
     """Modelo de usuario personalizado con roles del sistema hospitalario"""

@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from django.conf import settings
 from .models import User
+from .recaptcha import RecaptchaValidator
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializador para el modelo de Usuario"""
@@ -15,14 +17,60 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 class LoginSerializer(serializers.Serializer):
-    """Serializador para el login de usuarios"""
+    """Serializador para el login de usuarios con validación reCAPTCHA"""
     
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    recaptcha_token = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+    
+    def validate_recaptcha_token(self, value):
+        """Valida el token de reCAPTCHA"""
+        # En modo desarrollo, permitir tokens vacíos o fallback
+        if settings.DEBUG and (not value or value == 'fallback-token'):
+            return value
+            
+        if not value:
+            raise serializers.ValidationError(
+                'Token de verificación reCAPTCHA requerido.'
+            )
+        
+        # Obtener IP del cliente
+        user_ip = None
+        if self.request:
+            user_ip = RecaptchaValidator.get_client_ip(self.request)
+        
+        # Validar con Google
+        result = RecaptchaValidator.validate_token(value, user_ip)
+        
+        if not result.get('success', False):
+            error_codes = result.get('error_codes', [])
+            if 'timeout-or-duplicate' in error_codes:
+                raise serializers.ValidationError(
+                    'La verificación ha expirado. Por favor, inténtalo de nuevo.'
+                )
+            elif 'invalid-input-response' in error_codes:
+                raise serializers.ValidationError(
+                    'Verificación inválida. Por favor, inténtalo de nuevo.'
+                )
+            else:
+                raise serializers.ValidationError(
+                    'Error en la verificación de seguridad. Por favor, inténtalo de nuevo.'
+                )
+        
+        return value
     
     def validate(self, attrs):
         username = attrs.get('username')
         password = attrs.get('password')
+        recaptcha_token = attrs.get('recaptcha_token')
+        
+        # Validar reCAPTCHA si está presente
+        if recaptcha_token:
+            self.validate_recaptcha_token(recaptcha_token)
         
         if username and password:
             user = authenticate(username=username, password=password)

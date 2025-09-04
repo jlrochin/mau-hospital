@@ -13,6 +13,8 @@ export default defineConfig({
     server: {
         port: 3000,
         host: true,
+        // HTTPS desactivado: reCAPTCHA funciona en http://localhost y evita errores TLS en Brave/Chrome
+        https: false,
         proxy: {
             '/api': {
                 target: 'http://localhost:8000',

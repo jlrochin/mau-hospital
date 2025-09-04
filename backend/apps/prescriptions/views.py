@@ -75,7 +75,19 @@ class RecetaDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     def perform_destroy(self, instance):
         """Solo admins pueden eliminar recetas"""
-        if self.request.user.role != 'ADMIN':
+        # Obtener el usuario real para acceder al role
+        try:
+            if hasattr(self.request.user, 'role'):
+                user_role = self.request.user.role
+            else:
+                # Para TokenUser de JWT, obtener el usuario real
+                from apps.authentication.models import User
+                user = User.objects.get(id=self.request.user.id)
+                user_role = user.role
+        except:
+            raise PermissionError("No tiene permisos para eliminar recetas")
+        
+        if user_role != 'ADMIN':
             raise PermissionError("No tiene permisos para eliminar recetas")
         
         instance.delete()
@@ -403,17 +415,37 @@ def agregar_lote_medicamento(request, receta_id, detalle_id):
             )
         
         # Verificar permisos según el tipo de receta
-        user_role = request.user.role
-        if receta.tipo_receta == 'FARMACIA' and user_role != 'FARMACIA':
+        # Obtener el usuario real para acceder al role
+        try:
+            if hasattr(request.user, 'role'):
+                user_role = request.user.role
+            else:
+                # Para TokenUser de JWT, obtener el usuario real
+                from apps.authentication.models import User
+                user = User.objects.get(id=request.user.id)
+                user_role = user.role
+        except:
+            user_role = None
+        
+        # Permitir acceso a ADMIN siempre
+        if user_role not in ['ADMIN', 'FARMACIA', 'CMI']:
             return Response(
-                {'error': 'No tienes permisos para dispensar medicamentos de farmacia'},
+                {'error': 'No tienes permisos para dispensar medicamentos'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        elif receta.tipo_receta == 'CMI' and user_role != 'CMI':
-            return Response(
-                {'error': 'No tienes permisos para dispensar medicamentos de CMI'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        
+        # Verificar permisos específicos (excepto para ADMIN)
+        if user_role != 'ADMIN':
+            if receta.tipo_receta == 'FARMACIA' and user_role != 'FARMACIA':
+                return Response(
+                    {'error': 'No tienes permisos para dispensar medicamentos de farmacia'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            elif receta.tipo_receta == 'CMI' and user_role != 'CMI':
+                return Response(
+                    {'error': 'No tienes permisos para dispensar medicamentos de CMI'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
         # Crear el serializador con contexto
         serializer = LoteDetalleRecetaCreateSerializer(
@@ -425,26 +457,50 @@ def agregar_lote_medicamento(request, receta_id, detalle_id):
         )
         
         if serializer.is_valid():
-            lote = serializer.save()
+            # Usar transacción para asegurar consistencia entre dispensación e inventario
+            from django.db import transaction
+            from apps.inventory.models import MedicamentoStock
             
-            # Actualizar la cantidad surtida total del medicamento
-            total_lotes = detalle.get_total_lotes_dispensados()
-            detalle.cantidad_surtida = total_lotes
-            detalle.save()
-            
-            # Actualizar estado de la receta si es necesario
-            if receta.is_completely_dispensed():
-                receta.estado = 'SURTIDA'
-                receta.fecha_dispensacion = timezone.now()
-                receta.dispensado_por = request.user
-                receta.save()
-            elif receta.is_partially_dispensed():
-                if receta.estado != 'PARCIALMENTE_SURTIDA':
-                    receta.fecha_dispensacion_parcial = timezone.now()
-                receta.estado = 'PARCIALMENTE_SURTIDA'
-                if receta.dispensado_por is None:
+            with transaction.atomic():
+                # Crear el lote
+                lote = serializer.save()
+                
+                # Actualizar inventario
+                try:
+                    medicamento_stock = MedicamentoStock.objects.get(
+                        medicamento_catalogo=detalle.medicamento
+                    )
+                    
+                    # Reducir stock
+                    medicamento_stock.current_stock -= lote.cantidad_dispensada
+                    medicamento_stock.last_movement_date = timezone.now()
+                    medicamento_stock.save()
+                    
+                    # Crear registro de movimiento (opcional - para auditoría)
+                    # Se podría agregar un modelo de MovimientoInventario específico para MedicamentoStock
+                    
+                except MedicamentoStock.DoesNotExist:
+                    # Si no existe stock, se podría crear uno con stock 0 o manejar el error
+                    pass
+                
+                # Actualizar la cantidad surtida total del medicamento
+                total_lotes = detalle.get_total_lotes_dispensados()
+                detalle.cantidad_surtida = total_lotes
+                detalle.save()
+                
+                # Actualizar estado de la receta si es necesario
+                if receta.is_completely_dispensed():
+                    receta.estado = 'SURTIDA'
+                    receta.fecha_dispensacion = timezone.now()
                     receta.dispensado_por = request.user
-                receta.save()
+                    receta.save()
+                elif receta.is_partially_dispensed():
+                    if receta.estado != 'PARCIALMENTE_SURTIDA':
+                        receta.fecha_dispensacion_parcial = timezone.now()
+                    receta.estado = 'PARCIALMENTE_SURTIDA'
+                    if receta.dispensado_por is None:
+                        receta.dispensado_por = request.user
+                    receta.save()
             
             return Response(LoteDetalleRecetaSerializer(lote).data, status=status.HTTP_201_CREATED)
         
@@ -484,7 +540,17 @@ def obtener_lotes_medicamento(request, receta_id, detalle_id):
 def recetas_completadas(request):
     """Vista para obtener recetas completadas con filtros por rol de usuario"""
     
-    user_role = request.user.role
+    # Obtener el usuario real para acceder al role
+    try:
+        if hasattr(request.user, 'role'):
+            user_role = request.user.role
+        else:
+            # Para TokenUser de JWT, obtener el usuario real
+            from apps.authentication.models import User
+            user = User.objects.get(id=request.user.id)
+            user_role = user.role
+    except:
+        return Response({'error': 'No tienes permisos para ver recetas completadas'}, status=status.HTTP_403_FORBIDDEN)
     
     # Filtro base: solo recetas completamente dispensadas
     queryset = Receta.objects.filter(estado='SURTIDA').select_related('paciente', 'prescrito_por', 'validado_por', 'dispensado_por')
@@ -533,3 +599,73 @@ def recetas_completadas(request):
         'user_role': user_role,
         'results': serializer.data
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def verificar_stock_medicamento(request, codigo_medicamento):
+    """
+    Verificar el stock disponible de un medicamento específico
+    """
+    try:
+        # Buscar el stock del medicamento
+        stock = MedicamentoStock.objects.filter(
+            codigo_medicamento=codigo_medicamento,
+            cantidad_disponible__gt=0
+        ).first()
+        
+        if stock:
+            return Response({
+                'medicamento': stock.nombre_medicamento,
+                'codigo': stock.codigo_medicamento,
+                'cantidad_disponible': stock.cantidad_disponible,
+                'unidad_medida': stock.unidad_medida,
+                'lote': stock.lote,
+                'fecha_vencimiento': stock.fecha_vencimiento,
+                'disponible': True
+            })
+        else:
+            return Response({
+                'codigo': codigo_medicamento,
+                'cantidad_disponible': 0,
+                'disponible': False,
+                'mensaje': 'Medicamento no disponible en inventario'
+            })
+            
+    except Exception as e:
+        return Response({
+            'error': f'Error al verificar stock: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def obtener_inventario_disponible(request):
+    """
+    Obtener lista de todos los medicamentos disponibles en inventario
+    """
+    try:
+        # Obtener todos los medicamentos con stock disponible
+        stocks = MedicamentoStock.objects.filter(cantidad_disponible__gt=0).order_by('nombre_medicamento')
+        
+        inventario = []
+        for stock in stocks:
+            inventario.append({
+                'codigo': stock.codigo_medicamento,
+                'nombre': stock.nombre_medicamento,
+                'cantidad_disponible': stock.cantidad_disponible,
+                'unidad_medida': stock.unidad_medida,
+                'lote': stock.lote,
+                'fecha_vencimiento': stock.fecha_vencimiento,
+                'precio_unitario': stock.precio_unitario
+            })
+        
+        return Response({
+            'inventario': inventario,
+            'total_items': len(inventario)
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': f'Error al obtener inventario: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

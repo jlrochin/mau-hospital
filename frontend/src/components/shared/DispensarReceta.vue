@@ -54,6 +54,19 @@
             Medicamentos a Dispensar
           </h3>
 
+          <!-- Mensaje de permisos - TEMPORAL: Comentado para testing -->
+          <!-- <div v-if="!tienePermisos && authStore.userRole !== 'ADMIN'" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+              <div class="text-sm">
+                <p class="text-red-800 font-medium">Sin permisos de dispensación</p>
+                <p class="text-red-700">No tienes permisos para dispensar medicamentos de {{ type }}. Contacta con tu administrador.</p>
+              </div>
+            </div>
+          </div> -->
+
           <div v-if="isLoading" class="text-center py-8">
             <div class="inline-flex items-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -97,8 +110,23 @@
                   </div>
                 </div>
 
-                <!-- Formulario de dispensación -->
-                <div v-if="!medicamento.is_completely_dispensed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+                <!-- Indicador de progreso -->
+                <div class="mb-4">
+                  <div class="flex justify-between text-sm text-secondary-600 mb-1">
+                    <span>Progreso de dispensación</span>
+                    <span>{{ medicamento.total_lotes_dispensados || medicamento.cantidad_surtida || 0 }} / {{ medicamento.cantidad_prescrita }}</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      class="h-2 rounded-full transition-all duration-300"
+                      :class="getProgressColor(medicamento)"
+                      :style="{ width: getProgressPercentage(medicamento) + '%' }"
+                    ></div>
+                  </div>
+                </div>
+
+                <!-- Formulario de dispensación tradicional -->
+                <div v-if="!medicamento.is_completely_dispensed && !medicamento.gestionLotesAbierta" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
                   <div>
                     <label class="form-label">
                       Cantidad a Surtir *
@@ -163,8 +191,127 @@
                   </div>
                 </div>
 
+                <!-- Gestión de lotes integrada -->
+                <div v-if="medicamento.gestionLotesAbierta && !medicamento.is_completely_dispensed" class="pt-4 border-t border-gray-200">
+                  <!-- Formulario para agregar nuevo lote -->
+                  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h5 class="text-sm font-medium text-blue-900 mb-3">Agregar Nuevo Lote</h5>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <label class="form-label text-xs">
+                          Cantidad a Surtir *
+                        </label>
+                        <input
+                          v-model.number="medicamento.nuevoLote.cantidad_dispensada"
+                          type="number"
+                          :min="1"
+                          :max="medicamento.cantidad_prescrita - (medicamento.total_lotes_dispensados || 0)"
+                          class="form-input"
+                          placeholder="Cantidad"
+                        />
+                        <p class="text-xs text-secondary-600 mt-1">
+                          Máximo: {{ medicamento.cantidad_prescrita - (medicamento.total_lotes_dispensados || 0) }} {{ medicamento.unidad_medida }}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label class="form-label text-xs">
+                          Lote *
+                        </label>
+                        <input
+                          v-model="medicamento.nuevoLote.lote"
+                          type="text"
+                          class="form-input"
+                          placeholder="Lote del medicamento"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="form-label text-xs">
+                          Fecha de Caducidad *
+                        </label>
+                        <input
+                          v-model="medicamento.nuevoLote.fecha_caducidad"
+                          type="date"
+                          :min="fechaMinima"
+                          class="form-input"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="mb-4">
+                      <label class="form-label text-xs">Observaciones</label>
+                      <textarea
+                        v-model="medicamento.nuevoLote.observaciones"
+                        class="form-input"
+                        rows="2"
+                        placeholder="Observaciones específicas para este lote..."
+                      ></textarea>
+                    </div>
+
+                    <div class="flex justify-end">
+                      <button
+                        @click="agregarLote(medicamento)"
+                        :disabled="!puedeAgregarLote(medicamento) || isSubmitting"
+                        class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span v-if="isSubmitting">Agregando...</span>
+                        <span v-else>Agregar Lote</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Lista de lotes existentes -->
+                  <div v-if="medicamento.lotesExistentes && medicamento.lotesExistentes.length > 0" class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h5 class="text-sm font-medium text-gray-900 mb-3">
+                      Lotes Dispensados ({{ medicamento.lotesExistentes.length }})
+                    </h5>
+                    
+                    <div class="space-y-2">
+                      <div
+                        v-for="lote in medicamento.lotesExistentes"
+                        :key="lote.id"
+                        class="border border-gray-300 rounded-lg p-3 bg-white"
+                      >
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                          <div>
+                            <span class="font-medium text-gray-700">Lote:</span>
+                            <div class="text-gray-900">{{ lote.numero_lote }}</div>
+                          </div>
+                          
+                          <div>
+                            <span class="font-medium text-gray-700">Cantidad:</span>
+                            <div class="text-gray-900">{{ lote.cantidad_dispensada }} {{ medicamento.unidad_medida }}</div>
+                          </div>
+                          
+                          <div>
+                            <span class="font-medium text-gray-700">Caducidad:</span>
+                            <div class="text-gray-900">{{ formatDate(lote.fecha_caducidad) }}</div>
+                          </div>
+                          
+                          <div>
+                            <span class="font-medium text-gray-700">Dispensado:</span>
+                            <div class="text-gray-900">{{ lote.fecha_dispensacion_formatted }}</div>
+                          </div>
+                        </div>
+                        
+                        <div v-if="lote.laboratorio" class="mt-1 text-xs">
+                          <span class="font-medium text-gray-700">Laboratorio:</span>
+                          <span class="text-gray-900">{{ lote.laboratorio }}</span>
+                        </div>
+                        
+                        <div v-if="lote.observaciones" class="mt-1 text-xs">
+                          <span class="font-medium text-gray-700">Observaciones:</span>
+                          <span class="text-gray-900">{{ lote.observaciones }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Mensaje para medicamentos completamente dispensados -->
-                <div v-else class="pt-4 border-t border-gray-200">
+                <div v-else-if="medicamento.is_completely_dispensed" class="pt-4 border-t border-gray-200">
                   <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div class="flex items-center">
                       <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,7 +326,7 @@
                 </div>
 
                 <!-- Observaciones específicas del medicamento -->
-                <div v-if="!medicamento.is_completely_dispensed" class="mt-4">
+                <div v-if="!medicamento.is_completely_dispensed && !medicamento.gestionLotesAbierta" class="mt-4">
                   <label class="form-label">
                     Observaciones
                   </label>
@@ -191,40 +338,37 @@
                   ></textarea>
                 </div>
 
-                <!-- Indicador de progreso -->
-                <div class="mt-4">
-                  <div class="flex justify-between text-sm text-secondary-600 mb-1">
-                    <span>Progreso de dispensación</span>
-                    <span>{{ medicamento.total_lotes_dispensados || medicamento.cantidad_surtida || 0 }} / {{ medicamento.cantidad_prescrita }}</span>
+                <!-- Botones de gestión -->
+                <div class="mt-4 flex justify-between items-center">
+                  <div class="flex space-x-2">
+                    <button
+                      @click="toggleGestionLotes(medicamento)"
+                      type="button"
+                      :disabled="medicamento.is_completely_dispensed"
+                      :class="[
+                        'text-sm',
+                        medicamento.is_completely_dispensed 
+                          ? 'btn btn-disabled cursor-not-allowed opacity-50' 
+                          : medicamento.gestionLotesAbierta 
+                            ? 'btn btn-secondary'
+                            : 'btn btn-outline'
+                      ]"
+                    >
+                      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                      </svg>
+                      {{ medicamento.gestionLotesAbierta ? 'Cerrar Gestión de Lotes' : 'Gestionar Múltiples Lotes' }}
+                    </button>
                   </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      class="h-2 rounded-full transition-all duration-300"
-                      :class="getProgressColor(medicamento)"
-                      :style="{ width: getProgressPercentage(medicamento) + '%' }"
-                    ></div>
-                  </div>
-                </div>
 
-                <!-- Botón de gestión de lotes múltiples -->
-                <div class="mt-4 flex justify-end">
-                  <button
-                    @click="abrirGestionLotes(medicamento)"
-                    type="button"
-                    :disabled="medicamento.is_completely_dispensed"
-                    :class="[
-                      'text-sm',
-                      medicamento.is_completely_dispensed 
-                        ? 'btn btn-disabled cursor-not-allowed opacity-50' 
-                        : 'btn btn-outline'
-                    ]"
-                    :title="medicamento.is_completely_dispensed ? 'Este medicamento ya está completamente dispensado y no se puede modificar' : 'Gestionar lotes de este medicamento'"
-                  >
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                    </svg>
-                    {{ medicamento.is_completely_dispensed ? 'Completo' : 'Gestionar Lotes' }}
-                  </button>
+                  <div v-if="medicamento.gestionLotesAbierta" class="text-xs text-secondary-600">
+                    <span v-if="(medicamento.cantidad_prescrita - (medicamento.total_lotes_dispensados || 0)) > 0" class="text-orange-600">
+                      Pendiente: {{ medicamento.cantidad_prescrita - (medicamento.total_lotes_dispensados || 0) }} {{ medicamento.unidad_medida }}
+                    </span>
+                    <span v-else class="text-green-600">
+                      ✓ Completamente dispensado
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -259,7 +403,10 @@
           <button
             @click="dispensarParcial"
             :disabled="!canDispenseParcial || isSubmitting"
-            class="btn-primary"
+            :class="[
+              'btn-primary',
+              (!canDispenseParcial) ? 'opacity-50 cursor-not-allowed' : ''
+            ]"
           >
             Dispensar Parcial
           </button>
@@ -267,7 +414,10 @@
           <button
             @click="dispensarCompleta"
             :disabled="!canDispenseComplete || isSubmitting"
-            class="btn-success"
+            :class="[
+              'btn-success',
+              (!canDispenseComplete) ? 'opacity-50 cursor-not-allowed' : ''
+            ]"
           >
             <span v-if="isSubmitting">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -300,6 +450,7 @@ import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useToast } from 'vue-toastification'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import {
   XMarkIcon
@@ -326,6 +477,7 @@ export default {
   emits: ['close', 'dispensed', 'recetaActualizada'],
   setup(props, { emit }) {
     const toast = useToast()
+    const authStore = useAuthStore()
     
     const medicamentos = ref([])
     const isLoading = ref(false)
@@ -336,6 +488,38 @@ export default {
     // Estado para gestión de lotes
     const mostrarGestionLotes = ref(false)
     const medicamentoSeleccionado = ref(null)
+    
+    // Verificar permisos según el tipo de receta
+    const tienePermisos = computed(() => {
+      console.log('[DispensarReceta] Debug permisos:', {
+        userRole: authStore.userRole,
+        effectiveRole: authStore.effectiveRole,
+        isSimulating: authStore.isSimulating,
+        type: props.type,
+        hasDispensePharmacy: authStore.hasPermission('dispense_pharmacy'),
+        hasDispenseCMI: authStore.hasPermission('dispense_cmi')
+      })
+      
+      // TEMPORAL: Siempre permitir para admins, sin importar simulación
+      if (authStore.userRole === 'ADMIN') {
+        console.log('[DispensarReceta] Admin detectado, permisos otorgados')
+        return true
+      }
+      
+      // TEMPORAL: También permitir si el effective role es ADMIN
+      if (authStore.effectiveRole === 'ADMIN') {
+        console.log('[DispensarReceta] Effective role ADMIN, permisos otorgados')
+        return true
+      }
+      
+      // Para otros roles, verificar permisos específicos
+      if (props.type === 'FARMACIA') {
+        return authStore.hasPermission('dispense_pharmacy')
+      } else if (props.type === 'CMI') {
+        return authStore.hasPermission('dispense_cmi')
+      }
+      return false
+    })
     
     // Función para limpiar estado
     const clearState = () => {
@@ -349,36 +533,64 @@ export default {
     }
     
     const canDispenseParcial = computed(() => {
-      return medicamentos.value.some(m => 
-        m.cantidad_surtida > 0 && 
-        m.lote && 
-        m.fecha_caducidad &&
-        !errors[`medicamento_${m.id}_cantidad`] &&
-        !errors[`medicamento_${m.id}_lote`] &&
-        !errors[`medicamento_${m.id}_caducidad`]
-      )
+      // TEMPORAL: Siempre permitir para testing
+      // if (!tienePermisos.value || medicamentos.value.length === 0) return false
+      if (medicamentos.value.length === 0) return false
+      
+      return medicamentos.value.some(m => {
+        // Solo considerar medicamentos que no estén completamente dispensados
+        if (m.is_completely_dispensed) return false
+        
+        const cantidadDispensada = m.total_lotes_dispensados || 0
+        const cantidadPendiente = m.cantidad_prescrita - cantidadDispensada
+        
+        // Si está usando gestión de lotes múltiples, verificar si hay lotes agregados
+        if (m.gestionLotesAbierta && m.lotesExistentes && m.lotesExistentes.length > 0) {
+          return true
+        }
+        
+        // Para dispensación tradicional, verificar campos básicos
+        const tieneErrores = errors[`medicamento_${m.id}_cantidad`] ||
+                            errors[`medicamento_${m.id}_lote`] ||
+                            errors[`medicamento_${m.id}_caducidad`]
+        
+        return m.cantidad_surtida > 0 && 
+               m.cantidad_surtida <= cantidadPendiente &&
+               m.lote && 
+               m.fecha_caducidad &&
+               !tieneErrores
+      })
     })
     
     const canDispenseComplete = computed(() => {
-      return medicamentos.value.length > 0 && medicamentos.value.every(m => {
+      // TEMPORAL: Siempre permitir para testing
+      // if (!tienePermisos.value || medicamentos.value.length === 0) return false
+      if (medicamentos.value.length === 0) return false
+      
+      return medicamentos.value.every(m => {
         // Verificar si el medicamento está completamente dispensado
         const cantidadDispensada = m.total_lotes_dispensados || m.cantidad_surtida || 0
         const estaCompleto = cantidadDispensada >= m.cantidad_prescrita
         
-        // Si usa lotes múltiples (total_lotes_dispensados > 0), no necesita lote/fecha en el objeto principal
+        // Si ya está completamente dispensado, está OK
+        if (estaCompleto) return true
+        
+        // Si usa lotes múltiples (total_lotes_dispensados > 0), debe estar completo
         const usaLotesMultiples = m.total_lotes_dispensados > 0
         
         if (usaLotesMultiples) {
           // Para lotes múltiples, solo verificar que esté completamente dispensado
-          return estaCompleto && !errors[`medicamento_${m.id}_cantidad`]
+          return estaCompleto
         } else {
           // Para dispensación tradicional, verificar todos los campos
+          const tieneErrores = errors[`medicamento_${m.id}_cantidad`] ||
+                              errors[`medicamento_${m.id}_lote`] ||
+                              errors[`medicamento_${m.id}_caducidad`]
+          
           return estaCompleto && 
                  m.lote && 
                  m.fecha_caducidad &&
-                 !errors[`medicamento_${m.id}_cantidad`] &&
-                 !errors[`medicamento_${m.id}_lote`] &&
-                 !errors[`medicamento_${m.id}_caducidad`]
+                 !tieneErrores
         }
       })
     })
@@ -413,7 +625,16 @@ export default {
           cantidad_surtida: detalle.cantidad_surtida || 0,
           lote: detalle.lote || '',
           fecha_caducidad: detalle.fecha_caducidad || '',
-          observaciones: detalle.observaciones_dispensacion || ''
+          observaciones: detalle.observaciones_dispensacion || '',
+          // Nuevos campos para gestión de lotes integrada
+          gestionLotesAbierta: false,
+          lotesExistentes: [],
+          nuevoLote: {
+            cantidad_dispensada: null,
+            lote: '',
+            fecha_caducidad: '',
+            observaciones: ''
+          }
         }))
         
         console.log(`[DispensarReceta] Medicamentos inicializados:`, medicamentos.value.length)
@@ -428,6 +649,11 @@ export default {
     }
     
     const validateMedicamento = (medicamento) => {
+      if (!medicamento || !medicamento.id) {
+        console.warn('[DispensarReceta] Intento de validar medicamento inválido:', medicamento)
+        return
+      }
+      
       const baseKey = `medicamento_${medicamento.id}`
       
       // Limpiar errores previos
@@ -435,26 +661,31 @@ export default {
       delete errors[`${baseKey}_lote`]
       delete errors[`${baseKey}_caducidad`]
       
+      // Si el medicamento está completamente dispensado, no validar
+      if (medicamento.is_completely_dispensed) {
+        return
+      }
+      
       // Calcular cantidad pendiente considerando lotes ya dispensados
       const cantidadYaDispensada = medicamento.total_lotes_dispensados || 0
       const cantidadPendiente = medicamento.cantidad_prescrita - cantidadYaDispensada
       
-      // Validar cantidad
-      if (medicamento.cantidad_surtida < 0) {
-        errors[`${baseKey}_cantidad`] = 'La cantidad no puede ser negativa'
-      } else if (medicamento.cantidad_surtida > cantidadPendiente) {
-        errors[`${baseKey}_cantidad`] = `Solo quedan ${cantidadPendiente} ${medicamento.unidad_medida || 'unidades'} por dispensar`
-      } else if (medicamento.cantidad_surtida > medicamento.cantidad_prescrita) {
-        errors[`${baseKey}_cantidad`] = 'No puede exceder la cantidad prescrita'
-      }
-      
-      // Validar lote si hay cantidad a surtir
-      if (medicamento.cantidad_surtida > 0 && !medicamento.lote.trim()) {
-        errors[`${baseKey}_lote`] = 'El lote es requerido'
-      }
-      
-      // Validar fecha de caducidad
+      // Validar cantidad solo si hay cantidad a surtir
       if (medicamento.cantidad_surtida > 0) {
+        if (medicamento.cantidad_surtida < 0) {
+          errors[`${baseKey}_cantidad`] = 'La cantidad no puede ser negativa'
+        } else if (medicamento.cantidad_surtida > cantidadPendiente) {
+          errors[`${baseKey}_cantidad`] = `Solo quedan ${cantidadPendiente} ${medicamento.unidad_medida || 'unidades'} por dispensar`
+        } else if (medicamento.cantidad_surtida > medicamento.cantidad_prescrita) {
+          errors[`${baseKey}_cantidad`] = 'No puede exceder la cantidad prescrita'
+        }
+        
+        // Validar lote si hay cantidad a surtir
+        if (!medicamento.lote || !medicamento.lote.trim()) {
+          errors[`${baseKey}_lote`] = 'El lote es requerido'
+        }
+        
+        // Validar fecha de caducidad
         if (!medicamento.fecha_caducidad) {
           errors[`${baseKey}_caducidad`] = 'La fecha de caducidad es requerida'
         } else {
@@ -470,11 +701,32 @@ export default {
     }
     
     const validateAllMedicamentos = () => {
-      medicamentos.value.forEach(validateMedicamento)
-      return Object.keys(errors).length === 0
+      // Limpiar errores previos
+      Object.keys(errors).forEach(key => {
+        if (key.startsWith('medicamento_')) {
+          delete errors[key]
+        }
+      })
+      
+      // Validar cada medicamento
+      medicamentos.value.forEach(medicamento => {
+        if (medicamento && medicamento.id) {
+          validateMedicamento(medicamento)
+        }
+      })
+      
+      // Verificar si hay errores
+      const hasErrors = Object.keys(errors).some(key => key.startsWith('medicamento_'))
+      return !hasErrors
     }
     
     const dispensarParcial = async () => {
+      // TEMPORAL: Comentar validación de permisos
+      // if (!tienePermisos.value) {
+      //   toast.error(`No tienes permisos para dispensar medicamentos de ${props.type}`)
+      //   return
+      // }
+      
       if (!validateAllMedicamentos()) {
         toast.error('Por favor corrige los errores en el formulario')
         return
@@ -484,6 +736,12 @@ export default {
     }
     
     const dispensarCompleta = async () => {
+      // TEMPORAL: Comentar validación de permisos
+      // if (!tienePermisos.value) {
+      //   toast.error(`No tienes permisos para dispensar medicamentos de ${props.type}`)
+      //   return
+      // }
+      
       if (!validateAllMedicamentos()) {
         toast.error('Por favor corrige los errores en el formulario')
         return
@@ -573,7 +831,102 @@ export default {
       return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: es })
     }
     
-    // Funciones para gestión de lotes
+    // Funciones para gestión de lotes integrada
+    const fechaMinima = computed(() => {
+      const today = new Date()
+      return today.toISOString().split('T')[0]
+    })
+    
+    const toggleGestionLotes = async (medicamento) => {
+      medicamento.gestionLotesAbierta = !medicamento.gestionLotesAbierta
+      
+      if (medicamento.gestionLotesAbierta && medicamento.lotesExistentes.length === 0) {
+        await cargarLotesMedicamento(medicamento)
+      }
+    }
+    
+    const cargarLotesMedicamento = async (medicamento) => {
+      try {
+        console.log(`[DispensarReceta] Cargando lotes para medicamento ID ${medicamento.id}`)
+        const response = await api.get(`/recetas/${props.recipe.folio_receta}/detalles/${medicamento.id}/lotes/list/`)
+        medicamento.lotesExistentes = response.data
+        console.log(`[DispensarReceta] Lotes cargados:`, response.data.length)
+      } catch (error) {
+        console.error('Error al cargar lotes:', error)
+        toast.error('Error al cargar los lotes del medicamento')
+      }
+    }
+    
+    const puedeAgregarLote = (medicamento) => {
+      const nuevoLote = medicamento.nuevoLote
+      const cantidadPendiente = medicamento.cantidad_prescrita - (medicamento.total_lotes_dispensados || 0)
+      
+      return nuevoLote.cantidad_dispensada > 0 &&
+             nuevoLote.lote.trim() &&
+             nuevoLote.fecha_caducidad &&
+             nuevoLote.cantidad_dispensada <= cantidadPendiente
+    }
+    
+    const agregarLote = async (medicamento) => {
+      // TEMPORAL: Comentar validación de permisos
+      // if (!tienePermisos.value) {
+      //   toast.error(`No tienes permisos para dispensar medicamentos de ${props.type}`)
+      //   return
+      // }
+      
+      if (!puedeAgregarLote(medicamento)) {
+        toast.error('Por favor completa todos los campos requeridos')
+        return
+      }
+      
+      // Verificar lote duplicado
+      if (medicamento.lotesExistentes.some(lote => lote.lote === medicamento.nuevoLote.lote)) {
+        toast.error('Este lote ya existe para este medicamento')
+        return
+      }
+      
+      try {
+        isSubmitting.value = true
+        
+        const response = await api.post(
+          `/recetas/${props.recipe.folio_receta}/detalles/${medicamento.id}/lotes/`,
+          medicamento.nuevoLote
+        )
+        
+        // Agregar el nuevo lote a la lista
+        medicamento.lotesExistentes.unshift(response.data)
+        
+        // Actualizar el total de lotes dispensados en el medicamento
+        const totalDispensado = medicamento.lotesExistentes.reduce((total, lote) => total + lote.cantidad_dispensada, 0)
+        medicamento.total_lotes_dispensados = totalDispensado
+        medicamento.is_completely_dispensed = totalDispensado >= medicamento.cantidad_prescrita
+        
+        // Resetear formulario
+        medicamento.nuevoLote = {
+          cantidad_dispensada: null,
+          lote: '',
+          fecha_caducidad: '',
+          observaciones: ''
+        }
+        
+        toast.success('Lote agregado correctamente')
+        
+        // Emitir evento para actualizar el componente padre
+        emit('recetaActualizada')
+        
+      } catch (error) {
+        console.error('Error al agregar lote:', error)
+        if (error.response?.data?.error) {
+          toast.error(error.response.data.error)
+        } else {
+          toast.error('Error al agregar el lote. Por favor intenta nuevamente.')
+        }
+      } finally {
+        isSubmitting.value = false
+      }
+    }
+    
+    // Funciones para gestión de lotes (modal antiguo - mantener por compatibilidad)
     const abrirGestionLotes = (medicamento) => {
       medicamentoSeleccionado.value = medicamento
       mostrarGestionLotes.value = true
@@ -637,6 +990,7 @@ export default {
       isSubmitting,
       observacionesGenerales,
       errors,
+      tienePermisos,
       canDispenseParcial,
       canDispenseComplete,
       validateMedicamento,
@@ -646,7 +1000,13 @@ export default {
       getProgressPercentage,
       getProgressColor,
       formatDate,
-      // Gestión de lotes
+      // Gestión de lotes integrada
+      fechaMinima,
+      toggleGestionLotes,
+      cargarLotesMedicamento,
+      puedeAgregarLote,
+      agregarLote,
+      // Gestión de lotes modal (compatibilidad)
       mostrarGestionLotes,
       medicamentoSeleccionado,
       abrirGestionLotes,

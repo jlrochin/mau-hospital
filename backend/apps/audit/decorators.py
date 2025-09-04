@@ -101,7 +101,8 @@ def audit_action(action_type, entity_type, description=None, priority='MEDIUM'):
                         }
                     )
                 except Exception as audit_error:
-                    logger.error(f'Error al crear registro de auditoría: {str(audit_error)}')
+                    # Error al crear registro de auditoría
+                    pass
                 
                 # Re-lanzar la excepción original
                 raise

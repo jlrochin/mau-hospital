@@ -247,7 +247,6 @@ export default {
           toast.info('No se encontraron pacientes con esos criterios')
         }
       } catch (error) {
-        console.error('Error searching patients:', error)
         toast.error('Error al buscar pacientes')
         searchResults.value = []
       } finally {
@@ -256,6 +255,11 @@ export default {
     }
     
     const showPatientDetails = (patient) => {
+      // Validar que el paciente tenga expediente antes de emitir
+      if (!patient || !patient.expediente) {
+        toast.error('Error: Paciente sin expediente válido')
+        return
+      }
       emit('patient-selected', patient)
     }
     
@@ -267,7 +271,6 @@ export default {
         duplicates.value = response.duplicados || []
         return response.duplicados_encontrados
       } catch (error) {
-        console.error('Error checking duplicates:', error)
         return false
       }
     }

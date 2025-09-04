@@ -15,19 +15,45 @@ class PacienteCIE10Serializer(serializers.ModelSerializer):
     
     def get_cie10_info(self, obj):
         """Obtener información del código CIE-10"""
-        return {
-            'codigo': obj.cie10.codigo,
-            'descripcion_corta': obj.cie10.descripcion_corta,
-            'descripcion': obj.cie10.descripcion,
-            'capitulo': obj.cie10.capitulo,
-            'tipo': obj.cie10.tipo
-        }
+        try:
+            # Validar que cie10 no sea None
+            if not obj.cie10:
+                print(f"🚨 WARNING: obj.cie10 es None para PacienteCIE10 ID {obj.id}")
+                return {
+                    'codigo': '',
+                    'descripcion_corta': 'Código no encontrado',
+                    'descripcion': 'Código CIE-10 no disponible',
+                    'capitulo': '',
+                    'tipo': ''
+                }
+            
+            # Validar que todos los campos existan
+            cie10_obj = obj.cie10
+            return {
+                'codigo': getattr(cie10_obj, 'codigo', '') or '',
+                'descripcion_corta': getattr(cie10_obj, 'descripcion_corta', '') or '',
+                'descripcion': getattr(cie10_obj, 'descripcion', '') or '',
+                'capitulo': getattr(cie10_obj, 'capitulo', '') or '',
+                'tipo': getattr(cie10_obj, 'tipo', '') or ''
+            }
+        except Exception as e:
+            print(f"🚨 ERROR en get_cie10_info: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'codigo': '',
+                'descripcion_corta': 'Error al obtener datos',
+                'descripcion': 'Error al obtener datos del código CIE-10',
+                'capitulo': '',
+                'tipo': ''
+            }
 
 class PacienteSerializer(serializers.ModelSerializer):
     """Serializador para el modelo Paciente"""
     
     nombre_completo = serializers.SerializerMethodField()
     edad = serializers.SerializerMethodField()
+    cie10_codes = serializers.SerializerMethodField()
     
     class Meta:
         model = Paciente
@@ -38,12 +64,26 @@ class PacienteSerializer(serializers.ModelSerializer):
             'telefono', 'direccion', 'contacto_emergencia_nombre',
             'contacto_emergencia_telefono', 'numero_seguro_social',
             'institucion_seguro', 'is_active', 'created_at', 'updated_at',
-            'created_by', 'updated_by'
+            'created_by', 'updated_by', 'cie10_codes'
         ]
         read_only_fields = [
             'nombre_completo', 'edad', 'created_at', 'updated_at',
-            'created_by', 'updated_by'
+            'created_by', 'updated_by', 'cie10_codes'
         ]
+    
+    def to_internal_value(self, data):
+        """Remover cie10_codes antes de la validación"""
+        print(f"🚨 DEBUG: to_internal_value recibido: {data}")
+        
+        if 'cie10_codes' in data:
+            data = data.copy()
+            cie10_codes_removed = data.pop('cie10_codes')
+            print(f"🚨 DEBUG: cie10_codes removido: {cie10_codes_removed}")
+        
+        print(f"🚨 DEBUG: data después de remover cie10_codes: {data}")
+        result = super().to_internal_value(data)
+        print(f"🚨 DEBUG: to_internal_value resultado: {result}")
+        return result
     
     def get_nombre_completo(self, obj):
         return obj.get_nombre_completo()
@@ -51,8 +91,47 @@ class PacienteSerializer(serializers.ModelSerializer):
     def get_edad(self, obj):
         return obj.get_edad()
     
+    def get_cie10_codes(self, obj):
+        """Obtener códigos CIE-10 de manera segura"""
+        try:
+            print(f"🚨 DEBUG get_cie10_codes: Procesando paciente {obj.expediente}")
+            # Obtener códigos CIE-10 relacionados
+            cie10_codes = PacienteCIE10.objects.filter(paciente=obj)
+            print(f"🚨 DEBUG get_cie10_codes: Encontrados {cie10_codes.count()} códigos")
+            
+            for cie10_code in cie10_codes:
+                print(f"🚨 DEBUG get_cie10_codes: Código {cie10_code.id}, cie10: {cie10_code.cie10}")
+                if cie10_code.cie10:
+                    print(f"🚨 DEBUG get_cie10_codes: CIE10 válido: {cie10_code.cie10.codigo}")
+                else:
+                    print(f"🚨 DEBUG get_cie10_codes: CIE10 es None!")
+            
+            serializer = PacienteCIE10Serializer(cie10_codes, many=True)
+            result = serializer.data
+            print(f"🚨 DEBUG get_cie10_codes: Serialización exitosa, resultado: {result}")
+            return result
+        except Exception as e:
+            print(f"🚨 ERROR en get_cie10_codes: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    def update(self, instance, validated_data):
+        """Actualización simple del paciente"""
+        print(f"🚨 DEBUG: validated_data recibido: {validated_data}")
+        
+        # Actualizar campos del paciente
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        print("🚨 DEBUG: Paciente actualizado exitosamente")
+        return instance
+    
     def validate_expediente(self, value):
         """Validación personalizada para expediente"""
+        print(f"🚨 DEBUG: Validando expediente: {value}")
+        
         if not value:
             raise serializers.ValidationError("El expediente es requerido")
         
@@ -65,7 +144,15 @@ class PacienteSerializer(serializers.ModelSerializer):
                 f"Ya existe un paciente con el expediente {value}"
             )
         
+        print(f"🚨 DEBUG: Expediente validado correctamente: {value}")
         return value
+    
+    def validate(self, attrs):
+        """Validación general del serializer"""
+        print(f"🚨 DEBUG: validate recibido: {attrs}")
+        result = super().validate(attrs)
+        print(f"🚨 DEBUG: validate resultado: {result}")
+        return result
     
     def validate_curp(self, value):
         """Validación personalizada para CURP"""
@@ -261,7 +348,10 @@ class PacienteUpdateSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         """Actualizar paciente asignando el usuario que lo actualizó"""
+        print(f"🚨 DEBUG PacienteUpdateSerializer.update: validated_data recibido: {validated_data}")
+        
         cie10_codes = validated_data.pop('cie10_codes', None)
+        print(f"🚨 DEBUG PacienteUpdateSerializer.update: cie10_codes extraído: {cie10_codes}")
         
         request = self.context.get('request')
         if request and request.user:
@@ -269,18 +359,26 @@ class PacienteUpdateSerializer(serializers.ModelSerializer):
         
         # Actualizar el paciente
         paciente = super().update(instance, validated_data)
+        print(f"🚨 DEBUG PacienteUpdateSerializer.update: Paciente actualizado: {paciente.expediente}")
         
         # Actualizar códigos CIE-10 si se proporcionaron
         if cie10_codes is not None:
+            print(f"🚨 DEBUG PacienteUpdateSerializer.update: Procesando {len(cie10_codes)} códigos CIE-10")
+            
             # Eliminar códigos existentes
             PacienteCIE10.objects.filter(paciente=paciente).delete()
+            print(f"🚨 DEBUG PacienteUpdateSerializer.update: Códigos CIE-10 existentes eliminados")
             
             # Crear los nuevos códigos
             if cie10_codes:
-                for cie10_data in cie10_codes:
+                for i, cie10_data in enumerate(cie10_codes):
+                    print(f"🚨 DEBUG PacienteUpdateSerializer.update: Procesando código {i+1}: {cie10_data}")
+                    
                     try:
                         cie10 = CIE10Mexico.objects.get(codigo=cie10_data['cie10'])
+                        print(f"🚨 DEBUG PacienteUpdateSerializer.update: CIE-10 encontrado: {cie10.codigo}")
                     except CIE10Mexico.DoesNotExist:
+                        print(f"🚨 DEBUG PacienteUpdateSerializer.update: CIE-10 NO encontrado: {cie10_data['cie10']}")
                         continue
                     
                     # Crear el PacienteCIE10
@@ -291,6 +389,7 @@ class PacienteUpdateSerializer(serializers.ModelSerializer):
                         es_principal=cie10_data.get('es_principal', False),
                         observaciones=cie10_data.get('observaciones', '')
                     )
+                    print(f"🚨 DEBUG PacienteUpdateSerializer.update: PacienteCIE10 creado para {cie10.codigo}")
         
         return paciente
 

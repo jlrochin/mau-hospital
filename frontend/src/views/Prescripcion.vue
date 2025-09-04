@@ -67,6 +67,7 @@
       :isVisible="showPatientDetails"
       @edit-patient="onEditPatient"
       @view-history="onViewHistory"
+      @addRecipe="onAddRecipe"
       @close="closePatientDetails"
     />
   </div>
@@ -117,16 +118,19 @@ export default {
     
     const onPatientSelected = async (patient) => {
       try {
+        // Validar que el paciente tenga expediente
+        if (!patient || !patient.expediente) {
+          toast.error('Error: Paciente sin expediente válido')
+          return
+        }
+        
         // Obtener datos completos del paciente al seleccionarlo
-        console.log('Obteniendo datos completos del paciente al seleccionarlo:', patient.expediente)
         const fullPatient = await patientsService.getPatientByExpediente(patient.expediente)
-        console.log('Datos completos obtenidos al seleccionar:', fullPatient)
         
         // Asignar el paciente completo
         selectedPatient.value = fullPatient
         showPatientDetails.value = true
       } catch (error) {
-        console.error('Error obteniendo datos completos del paciente al seleccionarlo:', error)
         toast.error('Error al cargar datos del paciente')
         // Usar los datos disponibles como fallback
         selectedPatient.value = patient
@@ -136,15 +140,18 @@ export default {
     
     const onEditPatient = async (patient) => {
       try {
+        // Validar que el paciente tenga expediente
+        if (!patient || !patient.expediente) {
+          toast.error('Error: Paciente sin expediente válido')
+          return
+        }
+        
         // Obtener datos completos del paciente antes de editar
-        console.log('Obteniendo datos completos del paciente en Prescripción:', patient.expediente)
         const fullPatient = await patientsService.getPatientByExpediente(patient.expediente)
-        console.log('Datos completos obtenidos en Prescripción:', fullPatient)
         
         // Abrir el modal de edición con datos completos
         editingPatient.value = fullPatient
       } catch (error) {
-        console.error('Error obteniendo datos completos del paciente en Prescripción:', error)
         toast.error('Error al cargar datos del paciente')
         // Usar los datos disponibles como fallback
         editingPatient.value = patient
@@ -153,6 +160,12 @@ export default {
     
     const onViewHistory = () => {
       showHistory.value = true
+    }
+    
+    const onAddRecipe = () => {
+      // Cerrar el modal de detalles del paciente y abrir el formulario de receta
+      showPatientDetails.value = false
+      showCreateRecipe.value = true
     }
     
     const closePatientModal = () => {
@@ -167,22 +180,26 @@ export default {
     
     const onPatientSaved = async (patient) => {
       try {
+        // Validar que el paciente tenga expediente
+        if (!patient || !patient.expediente) {
+          toast.error('Error: Paciente sin expediente válido')
+          closePatientModal()
+          return
+        }
+        
         // Obtener datos frescos del paciente después de guardar
-        console.log('Obteniendo datos frescos del paciente después de guardar:', patient.expediente)
         const freshPatient = await patientsService.getPatientByExpediente(patient.expediente)
-        console.log('Datos frescos obtenidos:', freshPatient)
         
         // Actualizar selectedPatient con los datos frescos
         selectedPatient.value = freshPatient
         
         closePatientModal()
-        toast.success('Paciente guardado correctamente')
+        // No mostrar toast aquí, ya se muestra en FormularioPaciente
       } catch (error) {
-        console.error('Error obteniendo datos frescos del paciente:', error)
         // Usar los datos del paciente guardado como fallback
         selectedPatient.value = patient
         closePatientModal()
-        toast.success('Paciente guardado correctamente')
+        // No mostrar toast aquí, ya se muestra en FormularioPaciente
       }
     }
     
@@ -201,6 +218,7 @@ export default {
       onPatientSelected,
       onEditPatient,
       onViewHistory,
+      onAddRecipe,
       closePatientModal,
       closePatientDetails,
       onPatientSaved,

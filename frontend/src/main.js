@@ -5,6 +5,7 @@ import router from './router'
 import App from './App.vue'
 
 import './assets/css/main.css'
+import './assets/styles/driver-theme.css'
 import 'vue-toastification/dist/index.css'
 
 const app = createApp(App)
